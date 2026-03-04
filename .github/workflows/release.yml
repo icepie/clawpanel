@@ -178,21 +178,18 @@ jobs:
           )
 
           CHANGELOG_BODY=""
-          [ -n "$FEATS" ] && CHANGELOG_BODY="${CHANGELOG_BODY}
-### ✨ 新功能
-${FEATS}
-"
-          [ -n "$FIXES" ] && CHANGELOG_BODY="${CHANGELOG_BODY}
-### 🐛 修复
-${FIXES}
-"
-          [ -n "$OTHERS" ] && CHANGELOG_BODY="${CHANGELOG_BODY}
-### 📦 其他
-${OTHERS}
-"
-          [ -z "$CHANGELOG_BODY" ] && CHANGELOG_BODY="
-- 常规更新与优化
-"
+          if [ -n "$FEATS" ]; then
+            CHANGELOG_BODY="${CHANGELOG_BODY}"$'\n### ✨ 新功能\n'"${FEATS}"$'\n'
+          fi
+          if [ -n "$FIXES" ]; then
+            CHANGELOG_BODY="${CHANGELOG_BODY}"$'\n### 🐛 修复\n'"${FIXES}"$'\n'
+          fi
+          if [ -n "$OTHERS" ]; then
+            CHANGELOG_BODY="${CHANGELOG_BODY}"$'\n### 📦 其他\n'"${OTHERS}"$'\n'
+          fi
+          if [ -z "$CHANGELOG_BODY" ]; then
+            CHANGELOG_BODY=$'\n- 常规更新与优化\n'
+          fi
 
           # ── 构建状态 ──
           if [ "$BUILD_RESULT" = "success" ]; then
@@ -202,52 +199,52 @@ ${OTHERS}
           fi
 
           # ── 写入 Release Notes ──
-          cat > release_body.md << ENDOFBODY
-${STATUS_BADGE}
-
-## 📥 下载安装
-
-根据你的操作系统选择对应安装包，点击文件名即可下载：
-
-### macOS
-| 芯片 | 安装包 |
-|------|--------|
-| Apple Silicon (M1/M2/M3/M4) | [ClawPanel_${VERSION}_aarch64.dmg](${DL}/ClawPanel_${VERSION}_aarch64.dmg) |
-| Intel | [ClawPanel_${VERSION}_x64.dmg](${DL}/ClawPanel_${VERSION}_x64.dmg) |
-
-> **首次打开提示"无法验证开发者"**：前往 **系统设置 → 隐私与安全性**，点击「仍要打开」。
-
-### Windows
-| 格式 | 安装包 |
-|------|--------|
-| EXE 安装器（推荐） | [ClawPanel_${VERSION}_x64-setup.exe](${DL}/ClawPanel_${VERSION}_x64-setup.exe) |
-| MSI 安装器 | [ClawPanel_${VERSION}_x64_en-US.msi](${DL}/ClawPanel_${VERSION}_x64_en-US.msi) |
-
-### Linux
-| 格式 | 安装包 |
-|------|--------|
-| AppImage（免安装） | [ClawPanel_${VERSION}_amd64.AppImage](${DL}/ClawPanel_${VERSION}_amd64.AppImage) |
-| DEB（Debian/Ubuntu） | [ClawPanel_${VERSION}_amd64.deb](${DL}/ClawPanel_${VERSION}_amd64.deb) |
-| RPM（Fedora/RHEL） | [ClawPanel-${VERSION}-1.x86_64.rpm](${DL}/ClawPanel-${VERSION}-1.x86_64.rpm) |
-
----
-
-## 🚀 首次使用
-
-1. 安装并打开 ClawPanel
-2. 首次运行会自动检测 Node.js 环境和 OpenClaw CLI
-3. 如未安装 OpenClaw，按提示一键安装即可
-4. 安装完成后自动跳转仪表盘，开始使用
-
-> **系统要求**：Node.js 18+（推荐 22 LTS）
-
----
-
-## ${CHANGELOG_HEADER}
-${CHANGELOG_BODY}
----
-
-📖 [项目主页](https://github.com/${REPO}) · 💬 [反馈问题](https://github.com/${REPO}/issues) · 📣 [QQ 群](https://qt.cool/c/OpenClaw)
-ENDOFBODY
+          {
+            echo "${STATUS_BADGE}"
+            echo ""
+            echo "## 📥 下载安装"
+            echo ""
+            echo "根据你的操作系统选择对应安装包，点击文件名即可下载："
+            echo ""
+            echo "### macOS"
+            echo "| 芯片 | 安装包 |"
+            echo "|------|--------|"
+            echo "| Apple Silicon (M1/M2/M3/M4) | [ClawPanel_${VERSION}_aarch64.dmg](${DL}/ClawPanel_${VERSION}_aarch64.dmg) |"
+            echo "| Intel | [ClawPanel_${VERSION}_x64.dmg](${DL}/ClawPanel_${VERSION}_x64.dmg) |"
+            echo ""
+            echo '> **首次打开提示"无法验证开发者"**：前往 **系统设置 → 隐私与安全性**，点击「仍要打开」。'
+            echo ""
+            echo "### Windows"
+            echo "| 格式 | 安装包 |"
+            echo "|------|--------|"
+            echo "| EXE 安装器（推荐） | [ClawPanel_${VERSION}_x64-setup.exe](${DL}/ClawPanel_${VERSION}_x64-setup.exe) |"
+            echo "| MSI 安装器 | [ClawPanel_${VERSION}_x64_en-US.msi](${DL}/ClawPanel_${VERSION}_x64_en-US.msi) |"
+            echo ""
+            echo "### Linux"
+            echo "| 格式 | 安装包 |"
+            echo "|------|--------|"
+            echo "| AppImage（免安装） | [ClawPanel_${VERSION}_amd64.AppImage](${DL}/ClawPanel_${VERSION}_amd64.AppImage) |"
+            echo "| DEB（Debian/Ubuntu） | [ClawPanel_${VERSION}_amd64.deb](${DL}/ClawPanel_${VERSION}_amd64.deb) |"
+            echo "| RPM（Fedora/RHEL） | [ClawPanel-${VERSION}-1.x86_64.rpm](${DL}/ClawPanel-${VERSION}-1.x86_64.rpm) |"
+            echo ""
+            echo "---"
+            echo ""
+            echo "## 🚀 首次使用"
+            echo ""
+            echo "1. 安装并打开 ClawPanel"
+            echo "2. 首次运行会自动检测 Node.js 环境和 OpenClaw CLI"
+            echo "3. 如未安装 OpenClaw，按提示一键安装即可"
+            echo "4. 安装完成后自动跳转仪表盘，开始使用"
+            echo ""
+            echo '> **系统要求**：Node.js 18+（推荐 22 LTS）'
+            echo ""
+            echo "---"
+            echo ""
+            echo "## ${CHANGELOG_HEADER}"
+            echo "${CHANGELOG_BODY}"
+            echo "---"
+            echo ""
+            echo "📖 [项目主页](https://github.com/${REPO}) · 💬 [反馈问题](https://github.com/${REPO}/issues) · 📣 [QQ 群](https://qt.cool/c/OpenClaw)"
+          } > release_body.md
 
           gh release edit "$TAG_NAME" --notes-file release_body.md
