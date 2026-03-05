@@ -124,7 +124,8 @@ pub fn write_openclaw_config(config: Value) -> Result<(), String> {
 /// 包括：同步 baseUrl/apiKey/api、删除已移除的 provider、删除已移除的 model、
 /// 确保 Gateway 运行时不会引用 openclaw.json 中已不存在的模型
 fn sync_providers_to_agent_models(config: &Value) {
-    let src_providers = config.pointer("/models/providers")
+    let src_providers = config
+        .pointer("/models/providers")
         .and_then(|p| p.as_object());
 
     // 收集 openclaw.json 中所有有效的 provider/model 组合
@@ -133,8 +134,7 @@ fn sync_providers_to_agent_models(config: &Value) {
         for (pk, pv) in providers {
             if let Some(models) = pv.get("models").and_then(|m| m.as_array()) {
                 for m in models {
-                    let id = m.get("id").and_then(|v| v.as_str())
-                        .or_else(|| m.as_str());
+                    let id = m.get("id").and_then(|v| v.as_str()).or_else(|| m.as_str());
                     if let Some(id) = id {
                         valid_models.insert(format!("{}/{}", pk, id));
                     }
@@ -161,18 +161,27 @@ fn sync_providers_to_agent_models(config: &Value) {
         if !models_path.exists() {
             continue;
         }
-        let Ok(content) = fs::read_to_string(&models_path) else { continue };
-        let Ok(mut models_json) = serde_json::from_str::<Value>(&content) else { continue };
+        let Ok(content) = fs::read_to_string(&models_path) else {
+            continue;
+        };
+        let Ok(mut models_json) = serde_json::from_str::<Value>(&content) else {
+            continue;
+        };
 
         let mut changed = false;
 
         // 同步 providers
-        if let Some(dst_providers) = models_json.get_mut("providers").and_then(|p| p.as_object_mut()) {
+        if let Some(dst_providers) = models_json
+            .get_mut("providers")
+            .and_then(|p| p.as_object_mut())
+        {
             // 1. 删除 openclaw.json 中已不存在的 provider
             if let Some(src) = src_providers {
-                let to_remove: Vec<String> = dst_providers.keys()
+                let to_remove: Vec<String> = dst_providers
+                    .keys()
                     .filter(|k| !src.contains_key(k.as_str()))
-                    .cloned().collect();
+                    .cloned()
+                    .collect();
                 for k in to_remove {
                     dst_providers.remove(&k);
                     changed = true;
@@ -184,26 +193,42 @@ fn sync_providers_to_agent_models(config: &Value) {
                         if let Some(dst_obj) = dst_provider.as_object_mut() {
                             // 同步连接信息
                             for field in ["baseUrl", "apiKey", "api"] {
-                                if let Some(src_val) = src_provider.get(field).and_then(|v| v.as_str()) {
-                                    if dst_obj.get(field).and_then(|v| v.as_str()) != Some(src_val) {
-                                        dst_obj.insert(field.to_string(), Value::String(src_val.to_string()));
+                                if let Some(src_val) =
+                                    src_provider.get(field).and_then(|v| v.as_str())
+                                {
+                                    if dst_obj.get(field).and_then(|v| v.as_str()) != Some(src_val)
+                                    {
+                                        dst_obj.insert(
+                                            field.to_string(),
+                                            Value::String(src_val.to_string()),
+                                        );
                                         changed = true;
                                     }
                                 }
                             }
                             // 清理已删除的 models
-                            if let Some(dst_models) = dst_obj.get_mut("models").and_then(|m| m.as_array_mut()) {
+                            if let Some(dst_models) =
+                                dst_obj.get_mut("models").and_then(|m| m.as_array_mut())
+                            {
                                 let src_model_ids: std::collections::HashSet<String> = src_provider
-                                    .get("models").and_then(|m| m.as_array())
-                                    .map(|arr| arr.iter().filter_map(|m| {
-                                        m.get("id").and_then(|v| v.as_str())
-                                            .or_else(|| m.as_str())
-                                            .map(|s| s.to_string())
-                                    }).collect())
+                                    .get("models")
+                                    .and_then(|m| m.as_array())
+                                    .map(|arr| {
+                                        arr.iter()
+                                            .filter_map(|m| {
+                                                m.get("id")
+                                                    .and_then(|v| v.as_str())
+                                                    .or_else(|| m.as_str())
+                                                    .map(|s| s.to_string())
+                                            })
+                                            .collect()
+                                    })
                                     .unwrap_or_default();
                                 let before = dst_models.len();
                                 dst_models.retain(|m| {
-                                    let id = m.get("id").and_then(|v| v.as_str())
+                                    let id = m
+                                        .get("id")
+                                        .and_then(|v| v.as_str())
                                         .or_else(|| m.as_str())
                                         .unwrap_or("");
                                     src_model_ids.contains(id)
