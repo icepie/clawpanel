@@ -76,8 +76,8 @@ async function loadDashboardData(page, fullRefresh = false) {
   ])
   const logsP = api.readLogTail('gateway', 20).catch(() => '')
 
-  // 第一波：服务状态 + 版本 + 配置 → 立即渲染统计卡片
-  const [servicesRes, versionRes, configRes] = await coreP
+  // 第一波：服务状态 + 配置 + 版本 → 立即渲染统计卡片
+  const [servicesRes, configRes, versionRes] = await coreP
   const services = servicesRes.status === 'fulfilled' ? servicesRes.value : []
   const version = versionRes.status === 'fulfilled' ? versionRes.value : {}
   const config = configRes.status === 'fulfilled' ? configRes.value : null
