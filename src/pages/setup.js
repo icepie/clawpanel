@@ -196,7 +196,7 @@ function renderSteps(page, { node, git, cliOk, config, version }) {
     <div class="config-section" style="text-align:left;margin-top:var(--space-md)">
       <div class="config-section-title" style="display:flex;align-items:center;gap:6px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
-        晴辰助手
+        AI 助手
       </div>
       <p style="color:var(--text-secondary);font-size:var(--font-size-sm);margin-bottom:var(--space-sm);line-height:1.5">
         遇到安装问题？AI 助手可以帮你诊断和解决。配置好模型后，点击下方按钮${!allOk ? '，当前问题会自动发送给 AI 分析' : ''}。
@@ -664,4 +664,3 @@ function bindEvents(page, nodeOk, detectState) {
     }
   })
 }
-

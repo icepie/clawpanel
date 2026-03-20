@@ -13,7 +13,7 @@ const NAV_ITEMS_FULL = [
     section: '概览',
     items: [
       { route: '/dashboard', label: '仪表盘', icon: 'dashboard' },
-      { route: '/assistant', label: '晴辰助手', icon: 'assistant' },
+      { route: '/assistant', label: 'AI 助手', icon: 'assistant' },
       { route: '/chat', label: '实时聊天', icon: 'chat' },
       { route: '/services', label: '服务管理', icon: 'services' },
       { route: '/logs', label: '日志查看', icon: 'logs' },
@@ -59,7 +59,7 @@ const NAV_ITEMS_SETUP = [
     section: '',
     items: [
       { route: '/setup', label: '初始设置', icon: 'setup' },
-      { route: '/assistant', label: '晴辰助手', icon: 'assistant' },
+      { route: '/assistant', label: 'AI 助手', icon: 'assistant' },
     ]
   },
   {

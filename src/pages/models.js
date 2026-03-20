@@ -6,7 +6,7 @@ import { api } from '../lib/tauri-api.js'
 import { toast } from '../components/toast.js'
 import { showModal, showConfirm } from '../components/modal.js'
 import { icon, statusIcon } from '../lib/icons.js'
-import { API_TYPES, PROVIDER_PRESETS, QTCOOL, MODEL_PRESETS, fetchQtcoolModels } from '../lib/model-presets.js'
+import { API_TYPES, PROVIDER_PRESETS, MODEL_PRESETS } from '../lib/model-presets.js'
 
 export async function render() {
   const page = document.createElement('div')
@@ -24,22 +24,6 @@ export async function render() {
     <div class="form-hint" style="margin-bottom:var(--space-md)">
       服务商是模型的来源（如 OpenAI、DeepSeek 等）。每个服务商下可添加多个模型。
       标记为「主模型」的将优先使用，其余作为备选自动切换。配置修改后自动保存。
-    </div>
-    <div id="qtcool-promo" style="margin-bottom:var(--space-md);border-radius:var(--radius-lg);background:var(--bg-secondary);border:1px solid var(--border-primary);padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
-      <div style="flex:1;min-width:200px">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-          ${icon('zap', 16)}
-          <span style="font-weight:600;font-size:var(--font-size-sm)">晴辰云</span>
-          <span style="font-size:10px;background:var(--primary);color:#fff;padding:1px 6px;border-radius:8px">推荐</span>
-        </div>
-        <div style="font-size:var(--font-size-xs);color:var(--text-secondary);line-height:1.5">
-          无需自行注册 API，一键添加即可使用。基础模型免费，高级模型低至官方价 2-3 折
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
-        <button class="btn btn-primary btn-sm" id="btn-qtcool-oneclick">${icon('plus', 14)} 获取模型列表</button>
-        <a href="${QTCOOL.site}" target="_blank" class="btn btn-secondary btn-sm">${icon('external-link', 12)} 了解更多</a>
-      </div>
     </div>
     <div id="default-model-bar"></div>
     <div style="margin-bottom:var(--space-md)">
@@ -711,101 +695,6 @@ function applyDefaultModel(state) {
 function bindTopActions(page, state) {
   page.querySelector('#btn-add-provider').onclick = () => addProvider(page, state)
   page.querySelector('#btn-undo').onclick = () => undo(page, state)
-
-  // 晴辰云：获取模型列表 → 弹窗让用户选择要添加的模型
-  page.querySelector('#btn-qtcool-oneclick').onclick = async () => {
-    if (!state.config) { toast('配置未加载完成，请稍候', 'warning'); return }
-
-    const btn = page.querySelector('#btn-qtcool-oneclick')
-    btn.textContent = '获取中...'
-    btn.disabled = true
-
-    const models = await fetchQtcoolModels()
-
-    btn.innerHTML = `${icon('plus', 14)} 获取模型列表`
-    btn.disabled = false
-
-    if (!models.length) {
-      toast('无法获取模型列表，请检查网络或稍后重试', 'error')
-      return
-    }
-
-    // 已有的模型 ID
-    const existingProvider = (state.config.models?.providers || {})[QTCOOL.providerKey]
-    const existingIds = new Set((existingProvider?.models || []).map(m => typeof m === 'string' ? m : m.id))
-
-    // 弹窗让用户勾选要添加的模型
-    const overlay = document.createElement('div')
-    overlay.className = 'modal-overlay'
-    overlay.innerHTML = `
-      <div class="modal" style="max-height:80vh;overflow-y:auto">
-        <div class="modal-title">选择要添加的模型</div>
-        <div class="form-hint" style="margin-bottom:12px">从晴辰云获取到 ${models.length} 个可用模型，勾选需要的模型后点击添加。</div>
-        <div style="margin-bottom:12px;display:flex;gap:8px">
-          <button class="btn btn-sm btn-secondary" id="qtsel-all">全选</button>
-          <button class="btn btn-sm btn-secondary" id="qtsel-none">全不选</button>
-        </div>
-        <div id="qtmodel-list" style="display:flex;flex-direction:column;gap:6px;max-height:40vh;overflow-y:auto;padding-right:4px">
-          ${models.map(m => {
-            const already = existingIds.has(m.id)
-            return `<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--radius-md);cursor:pointer;background:var(--bg-tertiary);opacity:${already ? '0.5' : '1'}">
-              <input type="checkbox" value="${m.id}" ${already ? 'disabled title="已添加"' : 'checked'} style="accent-color:var(--primary)">
-              <span style="font-size:var(--font-size-sm);flex:1">${m.id}</span>
-              ${already ? '<span style="font-size:10px;color:var(--text-tertiary)">已有</span>' : ''}
-            </label>`
-          }).join('')}
-        </div>
-        <div class="modal-actions" style="margin-top:16px">
-          <button class="btn btn-primary" id="qtsel-confirm">${icon('plus', 14)} 添加选中模型</button>
-          <button class="btn btn-secondary" id="qtsel-cancel">取消</button>
-        </div>
-      </div>
-    `
-    document.body.appendChild(overlay)
-    overlay.querySelector('#qtsel-cancel').onclick = () => overlay.remove()
-    overlay.querySelector('#qtsel-all').onclick = () => {
-      overlay.querySelectorAll('#qtmodel-list input:not(:disabled)').forEach(cb => cb.checked = true)
-    }
-    overlay.querySelector('#qtsel-none').onclick = () => {
-      overlay.querySelectorAll('#qtmodel-list input:not(:disabled)').forEach(cb => cb.checked = false)
-    }
-    overlay.querySelector('#qtsel-confirm').onclick = () => {
-      const selected = [...overlay.querySelectorAll('#qtmodel-list input:checked:not(:disabled)')].map(cb => cb.value)
-      overlay.remove()
-      if (!selected.length) { toast('未选择任何模型', 'info'); return }
-
-      pushUndo(state)
-      if (!state.config.models) state.config.models = {}
-      if (!state.config.models.providers) state.config.models.providers = {}
-
-      const selectedModels = models.filter(m => selected.includes(m.id))
-      if (existingProvider) {
-        let added = 0
-        for (const m of selectedModels) {
-          if (!existingIds.has(m.id)) { existingProvider.models.push({ ...m }); added++ }
-        }
-        toast(added ? `已添加 ${added} 个模型` : '所选模型均已存在', added ? 'success' : 'info')
-      } else {
-        state.config.models.providers[QTCOOL.providerKey] = {
-          baseUrl: QTCOOL.baseUrl,
-          apiKey: QTCOOL.defaultKey,
-          api: QTCOOL.api,
-          models: selectedModels.map(m => ({ ...m })),
-        }
-        if (!getCurrentPrimary(state.config) && selectedModels.length) {
-          if (!state.config.agents) state.config.agents = {}
-          if (!state.config.agents.defaults) state.config.agents.defaults = {}
-          if (!state.config.agents.defaults.model) state.config.agents.defaults.model = {}
-          state.config.agents.defaults.model.primary = QTCOOL.providerKey + '/' + selectedModels[0].id
-        }
-        toast(`已添加晴辰云（${selectedModels.length} 个模型）`, 'success')
-      }
-      renderProviders(page, state)
-      renderDefaultBar(page, state)
-      updateUndoBtn(page, state)
-      autoSave(state)
-    }
-  }
 }
 
 // 添加服务商（带预设快捷选择）

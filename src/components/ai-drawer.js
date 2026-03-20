@@ -53,7 +53,7 @@ export function openAIDrawerWithError(errorCtx) {
       _fab.el.classList.add('has-error')
     } else {
       import('./toast.js')
-        .then(({ toast }) => toast('已保存诊断上下文，可从侧边栏进入「晴辰助手」继续处理', 'info'))
+        .then(({ toast }) => toast('已保存诊断上下文，可从侧边栏进入「AI 助手」继续处理', 'info'))
         .catch(() => {})
     }
   } else {
