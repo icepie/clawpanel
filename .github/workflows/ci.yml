@@ -1,5 +1,5 @@
 # ClawPanel 持续集成工作流
-# 在推送到 main 分支或提交 PR 到 main 分支时自动运行
+# 推送到 main 分支时自动构建跨平台安装包并上传到 dev prerelease
 name: CI
 
 on:
@@ -14,50 +14,61 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
-    name: 检查 (${{ matrix.platform.name }})
+  # ── 跨平台构建并上传到 dev prerelease ──────────────────────────────────────
+  build:
+    name: 构建 (${{ matrix.platform.name }})
+    # PR 只做检查，不构建发布
+    if: github.event_name == 'push'
     runs-on: ${{ matrix.platform.os }}
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
         platform:
-          # macOS Apple Silicon
-          - name: macOS (ARM64)
+          - name: macOS (Apple Silicon)
             os: macos-latest
-          # Linux x86_64
+            args: --target aarch64-apple-darwin
+            rust_target: aarch64-apple-darwin
+          - name: macOS (Intel)
+            os: macos-latest
+            args: --target x86_64-apple-darwin
+            rust_target: x86_64-apple-darwin
           - name: Linux (x64)
             os: ubuntu-latest
-          # Windows x86_64
+            args: ""
+            rust_target: ""
           - name: Windows (x64)
             os: windows-latest
+            args: ""
+            rust_target: ""
 
     steps:
-      # 签出代码
       - name: 签出代码
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      # 安装 Node.js 22
       - name: 安装 Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
-      # 安装前端依赖
       - name: 安装前端依赖
         run: npm ci
 
-      # 安装 Rust 工具链 (stable)
       - name: 安装 Rust 工具链
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.rust_target }}
 
-      # Rust 编译缓存
       - name: Rust 编译缓存
         uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
+          key: ${{ matrix.platform.name }}
 
-      # Linux 专用: 安装 Tauri v2 系统依赖
       - name: 安装 Linux 系统依赖
         if: runner.os == 'Linux'
         run: |
@@ -70,21 +81,78 @@ jobs:
             libgtk-3-dev \
             libayatana-appindicator3-dev
 
-      # Rust 格式检查
+      - name: 构建并上传到 dev prerelease
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: dev
+          releaseName: "ClawPanel dev"
+          releaseBody: "开发版本，由最新 main 分支自动构建。"
+          releaseDraft: false
+          prerelease: true
+          args: ${{ matrix.platform.args }}
+
+  # ── PR 只做代码检查，不构建发布 ────────────────────────────────────────────
+  check:
+    name: 检查 (${{ matrix.platform.name }})
+    if: github.event_name == 'pull_request'
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: macOS (ARM64)
+            os: macos-latest
+          - name: Linux (x64)
+            os: ubuntu-latest
+          - name: Windows (x64)
+            os: windows-latest
+
+    steps:
+      - name: 签出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 安装前端依赖
+        run: npm ci
+
+      - name: 安装 Rust 工具链
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust 编译缓存
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: 安装 Linux 系统依赖
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev
+
       - name: Rust 格式检查
         working-directory: src-tauri
         run: cargo fmt --all -- --check
 
-      # Rust 编译检查
       - name: Rust 编译检查
         working-directory: src-tauri
         run: cargo check
 
-      # Rust Lint（警告视为错误）
       - name: Rust Clippy
         working-directory: src-tauri
         run: cargo clippy --all-targets -- -D warnings
 
-      # 前端构建验证
       - name: 前端构建验证
         run: npm run build
