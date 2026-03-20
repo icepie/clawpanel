@@ -13,7 +13,8 @@ export const API_TYPES = [
 
 // 服务商快捷预设
 export const PROVIDER_PRESETS = [
-  { key: 'shengsuanyun', label: '胜算云', baseUrl: 'https://router.shengsuanyun.com/api/v1', api: 'openai-completions', site: 'https://www.shengsuanyun.com/?from=CH_4BVI0BM2', desc: '国内知名 AI 模型聚合平台，支持多种主流模型' },
+  { key: 'nicerouter', label: 'NiceRouter', baseUrl: 'https://nicerouter.com/v1', api: 'openai-completions', site: 'https://nicerouter.com', desc: 'NiceRouter AI 网关服务' },
+  { key: 'nicerouter-ee', label: 'NiceRouter EE', baseUrl: 'https://ee.niceruter.com/v1', api: 'openai-completions', site: 'https://ee.niceruter.com', desc: 'NiceRouter 企业版 AI 网关服务' },
   { key: 'siliconflow', label: '硅基流动', baseUrl: 'https://api.siliconflow.cn/v1', api: 'openai-completions', site: 'https://cloud.siliconflow.cn/i/PFrw2an5', desc: '高性价比推理平台，支持 DeepSeek、Qwen 等开源模型' },
   { key: 'volcengine', label: '火山引擎', baseUrl: 'https://ark.cn-beijing.volces.com/api/v3', api: 'openai-completions', site: 'https://volcengine.com/L/Ph1OP5I3_GY', desc: '字节跳动旗下云平台，支持豆包等模型' },
   { key: 'aliyun', label: '阿里云百炼', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', api: 'openai-completions', site: 'https://www.aliyun.com/benefit/ai/aistar?userCode=keahn2zr&clubBiz=subTask..12435175..10263..', desc: '阿里云 AI 大模型平台，支持通义千问全系列' },
@@ -26,15 +27,6 @@ export const PROVIDER_PRESETS = [
   { key: 'nvidia', label: 'NVIDIA NIM', baseUrl: 'https://integrate.api.nvidia.com/v1', api: 'openai-completions', desc: '英伟达推理平台，支持 Llama、Mistral 等模型' },
   { key: 'ollama', label: 'Ollama (本地)', baseUrl: 'http://127.0.0.1:11434/v1', api: 'openai-completions' },
 ]
-
-// 胜算云推广配置
-export const SHENGSUANYUN = {
-  baseUrl: 'https://router.shengsuanyun.com/api/v1',
-  site: 'https://www.shengsuanyun.com/?from=CH_4BVI0BM2',
-  providerKey: 'shengsuanyun',
-  brandName: '胜算云',
-  api: 'openai-completions',
-}
 
 // 常用模型预设（按服务商分组）
 export const MODEL_PRESETS = {

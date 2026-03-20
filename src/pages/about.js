@@ -17,7 +17,7 @@ export async function render() {
       <img src="/images/logo-brand.png" alt="ClawPanel" style="height:48px;width:auto">
       <div>
         <h1 class="page-title" style="margin:0">ClawPanel</h1>
-        <p class="page-desc" style="margin:0">OpenClaw 可视化管理面板 · <a href="https://github.com/icepie/clawpanel" target="_blank" rel="noopener" style="color:var(--primary)">GitHub</a></p>
+        <p class="page-desc" style="margin:0">OpenClaw 可视化管理面板</p>
       </div>
     </div>
     <div class="stat-cards" id="version-cards">
@@ -449,7 +449,6 @@ async function checkHotUpdate(cards, panelVersion) {
         <span style="color:var(--accent)">新版本: v${ver}</span>
         ${changelog ? `<span style="color:var(--text-tertiary);font-size:var(--font-size-xs)">${changelog}</span>` : ''}
         <button class="btn btn-primary btn-sm" id="btn-hot-download" style="padding:2px 8px;font-size:var(--font-size-xs)">热更新</button>
-        <a class="btn btn-secondary btn-sm" href="https://github.com/icepie/clawpanel/releases" target="_blank" rel="noopener" style="padding:2px 8px;font-size:var(--font-size-xs)">完整安装包</a>
       `
       meta.querySelector('#btn-hot-download')?.addEventListener('click', async () => {
         const btn = meta.querySelector('#btn-hot-download')
@@ -464,14 +463,14 @@ async function checkHotUpdate(cards, panelVersion) {
         }
       })
     } else if (!info.compatible) {
-      meta.innerHTML = '<span style="color:var(--text-tertiary)">需要更新完整安装包</span> <a class="btn btn-primary btn-sm" href="https://github.com/icepie/clawpanel/releases" target="_blank" rel="noopener" style="padding:2px 8px;font-size:var(--font-size-xs)">前往 GitHub 下载</a>'
+      meta.innerHTML = '<span style="color:var(--text-tertiary)">需要更新完整安装包</span>'
     } else {
       meta.innerHTML = '<span style="color:var(--success)">已是最新</span>'
     }
   } catch (err) {
     const meta = el()
     if (!meta) return
-    meta.innerHTML = `<span style="color:var(--text-tertiary)">暂无法检查更新</span> <a class="btn btn-secondary btn-sm" href="https://github.com/icepie/clawpanel/releases" target="_blank" rel="noopener" style="padding:2px 8px;font-size:var(--font-size-xs)">前往 GitHub 下载</a>`
+    meta.innerHTML = `<span style="color:var(--text-tertiary)">暂无法检查更新</span>`
   }
 }
 
