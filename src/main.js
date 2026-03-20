@@ -88,7 +88,7 @@ function showBackendDownOverlay() {
       </button>
       <div id="backend-retry-status" style="font-size:12px;color:var(--text-tertiary);margin-top:12px"></div>
       <div style="margin-top:16px;font-size:11px;color:#aaa">
-        <a href="https://claw.qt.cool" target="_blank" rel="noopener" style="color:#aaa;text-decoration:none">claw.qt.cool</a>
+        <a href="https://github.com/icepie/clawpanel" target="_blank" rel="noopener" style="color:#aaa;text-decoration:none">GitHub</a>
         <span style="margin:0 6px">&middot;</span>v${APP_VERSION}
       </div>
     </div>
@@ -177,7 +177,7 @@ function showLoginOverlay(defaultPw) {
         </div>
       </details>` : ''}
       <div style="margin-top:${hasDefault ? '20' : '12'}px;font-size:11px;color:#aaa;text-align:center">
-        <a href="https://claw.qt.cool" target="_blank" rel="noopener" style="color:#aaa;text-decoration:none">claw.qt.cool</a>
+        <a href="https://github.com/icepie/clawpanel" target="_blank" rel="noopener" style="color:#aaa;text-decoration:none">GitHub</a>
         <span style="margin:0 6px">·</span>v${APP_VERSION}
       </div>
     </div>
@@ -644,9 +644,9 @@ async function checkGlobalUpdate() {
         </div>
         ${isWeb
           ? `<button class="btn btn-sm" id="btn-update-show-cmd">更新方法</button>
-             <a class="btn btn-sm" href="https://github.com/qingchencloud/clawpanel/releases" target="_blank" rel="noopener">Release Notes</a>`
+             <a class="btn btn-sm" href="https://github.com/icepie/clawpanel/releases" target="_blank" rel="noopener">Release Notes</a>`
           : `<button class="btn btn-sm" id="btn-update-hot">热更新</button>
-             <a class="btn btn-sm" href="https://github.com/qingchencloud/clawpanel/releases" target="_blank" rel="noopener">完整安装包</a>`
+             <a class="btn btn-sm" href="https://github.com/icepie/clawpanel/releases" target="_blank" rel="noopener">完整安装包</a>`
         }
         <button class="update-banner-close" id="btn-update-dismiss" title="忽略此版本">✕</button>
       </div>
@@ -743,7 +743,7 @@ function startUpdateChecker() {
         <div style="font-size:18px;font-weight:600;margin-bottom:8px;color:#18181b">页面加载失败</div>
         <div style="font-size:13px;color:#71717a;max-width:400px;line-height:1.6;margin-bottom:16px">${String(bootErr?.message || bootErr).replace(/</g,'&lt;')}</div>
         <button onclick="location.reload()" style="padding:8px 20px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;cursor:pointer">刷新重试</button>
-        <div style="margin-top:24px;font-size:11px;color:#a1a1aa">如果问题持续出现，请尝试重新安装 ClawPanel<br>或在 <a href="https://github.com/qingchencloud/clawpanel/issues" target="_blank" style="color:#6366f1">GitHub Issues</a> 反馈</div>
+        <div style="margin-top:24px;font-size:11px;color:#a1a1aa">如果问题持续出现，请尝试重新安装 ClawPanel<br>或在 <a href="https://github.com/icepie/clawpanel/issues" target="_blank" style="color:#6366f1">GitHub Issues</a> 反馈</div>
       </div>`
   }
   startUpdateChecker()

@@ -17,7 +17,7 @@ export async function render() {
       <img src="/images/logo-brand.png" alt="ClawPanel" style="height:48px;width:auto">
       <div>
         <h1 class="page-title" style="margin:0">ClawPanel</h1>
-        <p class="page-desc" style="margin:0">OpenClaw 可视化管理面板 · <a href="https://claw.qt.cool" target="_blank" rel="noopener" style="color:var(--primary)">claw.qt.cool</a></p>
+        <p class="page-desc" style="margin:0">OpenClaw 可视化管理面板 · <a href="https://github.com/icepie/clawpanel" target="_blank" rel="noopener" style="color:var(--primary)">GitHub</a></p>
       </div>
     </div>
     <div class="stat-cards" id="version-cards">
@@ -449,7 +449,7 @@ async function checkHotUpdate(cards, panelVersion) {
         <span style="color:var(--accent)">新版本: v${ver}</span>
         ${changelog ? `<span style="color:var(--text-tertiary);font-size:var(--font-size-xs)">${changelog}</span>` : ''}
         <button class="btn btn-primary btn-sm" id="btn-hot-download" style="padding:2px 8px;font-size:var(--font-size-xs)">热更新</button>
-        <a class="btn btn-secondary btn-sm" href="https://github.com/qingchencloud/clawpanel/releases" target="_blank" rel="noopener" style="padding:2px 8px;font-size:var(--font-size-xs)">完整安装包</a>
+        <a class="btn btn-secondary btn-sm" href="https://github.com/icepie/clawpanel/releases" target="_blank" rel="noopener" style="padding:2px 8px;font-size:var(--font-size-xs)">完整安装包</a>
       `
       meta.querySelector('#btn-hot-download')?.addEventListener('click', async () => {
         const btn = meta.querySelector('#btn-hot-download')
@@ -464,14 +464,14 @@ async function checkHotUpdate(cards, panelVersion) {
         }
       })
     } else if (!info.compatible) {
-      meta.innerHTML = '<span style="color:var(--text-tertiary)">需要更新完整安装包</span> <a class="btn btn-primary btn-sm" href="https://claw.qt.cool" target="_blank" rel="noopener" style="padding:2px 8px;font-size:var(--font-size-xs)">前往官网下载</a> <a class="btn btn-secondary btn-sm" href="https://github.com/qingchencloud/clawpanel/releases" target="_blank" rel="noopener" style="padding:2px 8px;font-size:var(--font-size-xs)">GitHub</a>'
+      meta.innerHTML = '<span style="color:var(--text-tertiary)">需要更新完整安装包</span> <a class="btn btn-primary btn-sm" href="https://github.com/icepie/clawpanel/releases" target="_blank" rel="noopener" style="padding:2px 8px;font-size:var(--font-size-xs)">前往 GitHub 下载</a>'
     } else {
       meta.innerHTML = '<span style="color:var(--success)">已是最新</span>'
     }
   } catch (err) {
     const meta = el()
     if (!meta) return
-    meta.innerHTML = `<span style="color:var(--text-tertiary)">暂无法检查更新</span> <a class="btn btn-secondary btn-sm" href="https://claw.qt.cool" target="_blank" rel="noopener" style="padding:2px 8px;font-size:var(--font-size-xs)">前往官网下载</a>`
+    meta.innerHTML = `<span style="color:var(--text-tertiary)">暂无法检查更新</span> <a class="btn btn-secondary btn-sm" href="https://github.com/icepie/clawpanel/releases" target="_blank" rel="noopener" style="padding:2px 8px;font-size:var(--font-size-xs)">前往 GitHub 下载</a>`
   }
 }
 
@@ -538,7 +538,7 @@ const PROJECTS = [
   {
     name: 'ClawPanel',
     desc: 'OpenClaw 可视化管理面板，Tauri v2 桌面应用',
-    url: 'https://github.com/qingchencloud/clawpanel',
+    url: 'https://github.com/icepie/clawpanel',
     gitee: 'https://gitee.com/QtCodeCreators/clawpanel',
   },
   {
@@ -572,7 +572,7 @@ function renderProjects(page) {
 }
 
 const LINKS = [
-  { label: 'Claw 项目官网', url: 'https://claw.qt.cool', primary: true },
+  { label: 'ClawPanel GitHub', url: 'https://github.com/icepie/clawpanel', primary: true },
   { label: 'OpenClaw 中文翻译', url: 'https://github.com/1186258278/OpenClawChineseTranslation' },
   { label: 'ClawApp 手机客户端', url: 'https://clawapp.qt.cool' },
   { label: 'cftunnel 内网穿透', url: 'https://cftunnel.qt.cool' },
@@ -585,10 +585,10 @@ function renderContribute(page) {
       ClawPanel 是开源项目，欢迎参与贡献！遇到问题请提 Issue，功能建议和代码改进欢迎提 PR。
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:8px">
-      <a class="btn btn-primary btn-sm" href="https://github.com/qingchencloud/clawpanel/issues/new" target="_blank" rel="noopener">提交 Issue</a>
-      <a class="btn btn-secondary btn-sm" href="https://github.com/qingchencloud/clawpanel/pulls" target="_blank" rel="noopener">提交 PR</a>
-      <a class="btn btn-secondary btn-sm" href="https://github.com/qingchencloud/clawpanel/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">贡献指南</a>
-      <a class="btn btn-secondary btn-sm" href="https://github.com/qingchencloud/clawpanel/issues" target="_blank" rel="noopener">查看 Issues</a>
+      <a class="btn btn-primary btn-sm" href="https://github.com/icepie/clawpanel/issues/new" target="_blank" rel="noopener">提交 Issue</a>
+      <a class="btn btn-secondary btn-sm" href="https://github.com/icepie/clawpanel/pulls" target="_blank" rel="noopener">提交 PR</a>
+      <a class="btn btn-secondary btn-sm" href="https://github.com/icepie/clawpanel/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">贡献指南</a>
+      <a class="btn btn-secondary btn-sm" href="https://github.com/icepie/clawpanel/issues" target="_blank" rel="noopener">查看 Issues</a>
     </div>
     <div style="margin-top:8px;font-size:var(--font-size-xs);color:var(--text-tertiary)">
       国内镜像：<a href="https://gitee.com/QtCodeCreators/clawpanel" target="_blank" rel="noopener" style="color:var(--accent)">Gitee</a>（无法访问 GitHub 时可用）
@@ -620,8 +620,8 @@ function renderCompany(page) {
           <a href="https://qingchencloud.com" target="_blank" rel="noopener" style="color:var(--accent)">qingchencloud.com</a>
         </div>
         <div style="padding:12px;border-radius:var(--radius-md);border:1px solid var(--border-primary);background:var(--bg-secondary)">
-          <div style="color:var(--text-tertiary);font-size:var(--font-size-xs);margin-bottom:4px">产品官网</div>
-          <a href="https://claw.qt.cool" target="_blank" rel="noopener" style="color:var(--accent)">claw.qt.cool</a>
+          <div style="color:var(--text-tertiary);font-size:var(--font-size-xs);margin-bottom:4px">项目主页</div>
+          <a href="https://github.com/icepie/clawpanel" target="_blank" rel="noopener" style="color:var(--accent)">github.com/icepie/clawpanel</a>
         </div>
         <div style="padding:12px;border-radius:var(--radius-md);border:1px solid var(--border-primary);background:var(--bg-secondary)">
           <div style="color:var(--text-tertiary);font-size:var(--font-size-xs);margin-bottom:4px">开源仓库</div>

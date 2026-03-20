@@ -182,7 +182,7 @@ export function renderSidebar(el) {
         <span>${isDark ? '日间模式' : '夜间模式'}</span>
       </div>
       <div class="sidebar-meta">
-        <a href="https://claw.qt.cool" target="_blank" rel="noopener" class="sidebar-link">claw.qt.cool</a>
+        <a href="https://github.com/icepie/clawpanel" target="_blank" rel="noopener" class="sidebar-link">GitHub</a>
         <span class="sidebar-version">v${APP_VERSION}</span>
       </div>
     </div>
