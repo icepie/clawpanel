@@ -1,7 +1,3 @@
-/**
- * 关于页面
- * 版本信息、项目链接、相关项目、系统环境
- */
 import { api } from '../lib/tauri-api.js'
 import { toast } from '../components/toast.js'
 import { showUpgradeModal, showConfirm } from '../components/modal.js'
@@ -25,38 +21,13 @@ export async function render() {
       <div class="stat-card loading-placeholder"></div>
       <div class="stat-card loading-placeholder"></div>
     </div>
-    <div class="config-section">
-      <div class="config-section-title">社群交流</div>
-      <div id="community-section"></div>
-    </div>
-    <div class="config-section">
-      <div class="config-section-title">相关项目</div>
-      <div id="projects-list"></div>
-    </div>
-    <div class="config-section">
-      <div class="config-section-title">参与贡献</div>
-      <div id="contribute-section"></div>
-    </div>
-    <div class="config-section">
-      <div class="config-section-title">快捷链接</div>
-      <div id="links-list"></div>
-    </div>
-    <div class="config-section">
-      <div class="config-section-title">关于我们</div>
-      <div id="company-section"></div>
-    </div>
     <div class="config-section" style="color:var(--text-tertiary);font-size:var(--font-size-xs)">
       <p>ClawPanel 基于 Tauri v2 构建，前端 Vanilla JS + Vite，后端 Rust。</p>
-      <p style="margin-top:8px">MIT License &copy; 2026 武汉晴辰天下网络科技有限公司</p>
+      <p style="margin-top:8px">MIT License &copy; 2026</p>
     </div>
   `
 
   loadData(page)
-  renderCommunity(page)
-  renderProjects(page)
-  renderContribute(page)
-  renderLinks(page)
-  renderCompany(page)
   return page
 }
 
@@ -474,166 +445,3 @@ async function checkHotUpdate(cards, panelVersion) {
   }
 }
 
-function compareVersions(a, b) {
-  const pa = a.split('.').map(Number)
-  const pb = b.split('.').map(Number)
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const na = pa[i] || 0
-    const nb = pb[i] || 0
-    if (na > nb) return 1
-    if (na < nb) return -1
-  }
-  return 0
-}
-
-function renderCommunity(page) {
-  const el = page.querySelector('#community-section')
-  el.innerHTML = `
-    <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start">
-      <div style="text-align:center">
-        <img src="/images/OpenClaw-QQ.png" alt="QQ 交流群" style="width:140px;height:140px;border-radius:var(--radius-md);border:1px solid var(--border-primary)">
-        <div style="font-size:var(--font-size-sm);margin-top:8px;color:var(--text-secondary)">QQ 交流群</div>
-      </div>
-      <div style="text-align:center">
-        <img src="/images/OpenClawWx.png" alt="微信交流群" style="width:140px;height:140px;border-radius:var(--radius-md);border:1px solid var(--border-primary)">
-        <div style="font-size:var(--font-size-sm);margin-top:8px;color:var(--text-secondary)">微信交流群</div>
-      </div>
-      <div style="text-align:center">
-        <img src="https://qt.cool/c/OpenClawDY/qr.png" alt="抖音交流群" style="width:140px;height:140px;border-radius:var(--radius-md);border:1px solid var(--border-primary);object-fit:contain;background:#fff">
-        <div style="font-size:var(--font-size-sm);margin-top:8px;color:var(--text-secondary)">抖音交流群</div>
-      </div>
-      <div style="text-align:center">
-        <img src="https://qt.cool/c/feishu/qr.png" alt="飞书交流群" style="width:140px;height:140px;border-radius:var(--radius-md);border:1px solid var(--border-primary);object-fit:contain;background:#fff">
-        <div style="font-size:var(--font-size-sm);margin-top:8px;color:var(--text-secondary)">飞书交流群</div>
-      </div>
-      <div style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:8px;padding-top:4px">
-        <div style="font-size:var(--font-size-sm);color:var(--text-secondary)">扫码或点击链接加入交流群，反馈问题、获取帮助</div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
-          <a class="btn btn-primary btn-sm" href="https://qt.cool/c/OpenClaw" target="_blank" rel="noopener">加入 QQ 群</a>
-          <a class="btn btn-primary btn-sm" href="https://qt.cool/c/OpenClawWx" target="_blank" rel="noopener">加入微信群</a>
-          <a class="btn btn-primary btn-sm" href="https://qt.cool/c/OpenClawDY" target="_blank" rel="noopener">加入抖音群</a>
-          <a class="btn btn-primary btn-sm" href="https://qt.cool/c/feishu" target="_blank" rel="noopener">加入飞书群</a>
-          <a class="btn btn-secondary btn-sm" href="https://yb.tencent.com/gp/i/LsvIw7mdR7Lb" target="_blank" rel="noopener">元宝派社群</a>
-        </div>
-        <div style="font-size:var(--font-size-xs);color:var(--text-tertiary);margin-top:8px">
-          2000 人大群，满员自动切换 · 碰到问题可直接在群内反馈
-        </div>
-      </div>
-    </div>
-  `
-}
-
-const PROJECTS = [
-  {
-    name: 'OpenClaw',
-    desc: 'AI Agent 框架，支持多模型协作、工具调用、记忆管理',
-    url: 'https://github.com/openclaw/openclaw',
-  },
-  {
-    name: 'OpenClaw-zh',
-    desc: '我们维护的 OpenClaw 汉化版，3000+ Star，中文界面 + 国内镜像优化',
-    url: 'https://github.com/1186258278/OpenClawChineseTranslation',
-  },
-  {
-    name: 'ClawPanel',
-    desc: 'OpenClaw 可视化管理面板，Tauri v2 桌面应用',
-    url: 'https://github.com/icepie/clawpanel',
-    gitee: 'https://gitee.com/QtCodeCreators/clawpanel',
-  },
-  {
-    name: 'ClawApp',
-    desc: '跨平台移动聊天客户端，H5 + 代理服务器架构，支持离线和流式传输',
-    url: 'https://github.com/qingchencloud/clawapp',
-  },
-  {
-    name: 'cftunnel',
-    desc: '全协议内网穿透工具，Cloud 模式免费 HTTP/WS + Relay 模式自建中继',
-    url: 'https://github.com/qingchencloud/cftunnel',
-  },
-]
-
-function renderProjects(page) {
-  const el = page.querySelector('#projects-list')
-  el.innerHTML = PROJECTS.map(p => `
-    <div class="service-card">
-      <div class="service-info">
-        <div>
-          <div class="service-name">${p.name}</div>
-          <div class="service-desc">${p.desc}</div>
-        </div>
-      </div>
-      <div class="service-actions">
-        <a class="btn btn-secondary btn-sm" href="${p.url}" target="_blank" rel="noopener">GitHub</a>
-        ${p.gitee ? `<a class="btn btn-secondary btn-sm" href="${p.gitee}" target="_blank" rel="noopener">国内镜像</a>` : ''}
-      </div>
-    </div>
-  `).join('')
-}
-
-const LINKS = [
-  { label: 'ClawPanel GitHub', url: 'https://github.com/icepie/clawpanel', primary: true },
-  { label: 'OpenClaw 中文翻译', url: 'https://github.com/1186258278/OpenClawChineseTranslation' },
-  { label: 'ClawApp 手机客户端', url: 'https://clawapp.qt.cool' },
-  { label: 'cftunnel 内网穿透', url: 'https://cftunnel.qt.cool' },
-]
-
-function renderContribute(page) {
-  const el = page.querySelector('#contribute-section')
-  el.innerHTML = `
-    <div style="font-size:var(--font-size-sm);color:var(--text-secondary);margin-bottom:12px">
-      ClawPanel 是开源项目，欢迎参与贡献！遇到问题请提 Issue，功能建议和代码改进欢迎提 PR。
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px">
-      <a class="btn btn-primary btn-sm" href="https://github.com/icepie/clawpanel/issues/new" target="_blank" rel="noopener">提交 Issue</a>
-      <a class="btn btn-secondary btn-sm" href="https://github.com/icepie/clawpanel/pulls" target="_blank" rel="noopener">提交 PR</a>
-      <a class="btn btn-secondary btn-sm" href="https://github.com/icepie/clawpanel/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">贡献指南</a>
-      <a class="btn btn-secondary btn-sm" href="https://github.com/icepie/clawpanel/issues" target="_blank" rel="noopener">查看 Issues</a>
-    </div>
-    <div style="margin-top:8px;font-size:var(--font-size-xs);color:var(--text-tertiary)">
-      国内镜像：<a href="https://gitee.com/QtCodeCreators/clawpanel" target="_blank" rel="noopener" style="color:var(--accent)">Gitee</a>（无法访问 GitHub 时可用）
-    </div>
-  `
-}
-
-function renderLinks(page) {
-  const el = page.querySelector('#links-list')
-  el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:var(--space-sm)">
-    ${LINKS.map(l => `<a class="btn ${l.primary ? 'btn-primary' : 'btn-secondary'} btn-sm" href="${l.url}" target="_blank" rel="noopener">${l.label}</a>`).join('')}
-  </div>`
-}
-
-function renderCompany(page) {
-  const el = page.querySelector('#company-section')
-  el.innerHTML = `
-    <div style="display:flex;flex-direction:column;gap:12px">
-      <div style="display:flex;align-items:center;gap:12px">
-        <img src="/images/logo-brand.png" alt="晴辰云" style="width:40px;height:40px;border-radius:10px;flex-shrink:0">
-        <div>
-          <div style="font-weight:700;font-size:var(--font-size-md)">武汉晴辰天下网络科技有限公司</div>
-          <div style="font-size:var(--font-size-sm);color:var(--text-secondary)">QingchenCloud</div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;font-size:var(--font-size-sm)">
-        <div style="padding:12px;border-radius:var(--radius-md);border:1px solid var(--border-primary);background:var(--bg-secondary)">
-          <div style="color:var(--text-tertiary);font-size:var(--font-size-xs);margin-bottom:4px">官方网站</div>
-          <a href="https://qingchencloud.com" target="_blank" rel="noopener" style="color:var(--accent)">qingchencloud.com</a>
-        </div>
-        <div style="padding:12px;border-radius:var(--radius-md);border:1px solid var(--border-primary);background:var(--bg-secondary)">
-          <div style="color:var(--text-tertiary);font-size:var(--font-size-xs);margin-bottom:4px">项目主页</div>
-          <a href="https://github.com/icepie/clawpanel" target="_blank" rel="noopener" style="color:var(--accent)">github.com/icepie/clawpanel</a>
-        </div>
-        <div style="padding:12px;border-radius:var(--radius-md);border:1px solid var(--border-primary);background:var(--bg-secondary)">
-          <div style="color:var(--text-tertiary);font-size:var(--font-size-xs);margin-bottom:4px">开源仓库</div>
-          <a href="https://github.com/qingchencloud" target="_blank" rel="noopener" style="color:var(--accent)">github.com/qingchencloud</a>
-        </div>
-        <div style="padding:12px;border-radius:var(--radius-md);border:1px solid var(--border-primary);background:var(--bg-secondary)">
-          <div style="color:var(--text-tertiary);font-size:var(--font-size-xs);margin-bottom:4px">商务合作</div>
-          <span style="color:var(--text-primary)">请通过官网联系我们</span>
-        </div>
-      </div>
-      <div style="font-size:var(--font-size-xs);color:var(--text-tertiary);line-height:1.6">
-        我们是 OpenClaw 汉化版（3000+ Star）和 ClawPanel 的作者团队。日常做 AI Agent 相关的产品和开源工具，也接企业私有化部署、定制开发之类的活儿。有事直接群里找我们就行。
-      </div>
-    </div>
-  `
-}
