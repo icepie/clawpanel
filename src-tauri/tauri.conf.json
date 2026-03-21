@@ -41,7 +41,6 @@
         "type": "embedBootstrapper",
         "silent": true
       },
-      "requestedExecutionLevel": "requireAdministrator",
       "nsis": {
         "languages": [
           "SimpChinese",
