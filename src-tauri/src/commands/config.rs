@@ -340,31 +340,23 @@ fn apply_git_install_env(cmd: &mut Command) {
 
 /// 修复缺失的 @mariozechner/pi-coding-agent/dist/utils/changelog.js。
 /// 返回 Some(path) 表示成功写入，None 表示无需处理（已存在或包未安装）。
+/// 不启动 npm 子进程，使用预知路径直接检测，调用方可放心同步执行。
 pub fn patch_pi_coding_agent_silent() -> Option<std::path::PathBuf> {
-    // 尝试多个候选的 node_modules 根目录
     let mut candidates: Vec<std::path::PathBuf> = Vec::new();
 
-    // 1. npm root -g
-    if let Some(root) = npm_command()
-        .args(["root", "-g"])
-        .output()
-        .ok()
-        .and_then(|o| {
-            if o.status.success() {
-                String::from_utf8(o.stdout)
-                    .ok()
-                    .map(|s| s.trim().to_string())
-            } else {
-                None
-            }
-        })
-    {
-        candidates.push(std::path::PathBuf::from(root));
-    }
-
-    // 2. Windows 已知安装路径
+    // Windows：优先检查 OpenClaw 自带安装目录，再检查系统 npm 全局目录
     #[cfg(target_os = "windows")]
     {
+        // dirs::data_local_dir() 使用 Windows API，比 %LOCALAPPDATA% 更可靠（UAC 场景）
+        if let Some(local) = dirs::data_local_dir() {
+            candidates.push(
+                local
+                    .join("Programs")
+                    .join("OpenClaw")
+                    .join("node_modules"),
+            );
+        }
+        // 兜底：env var（非 UAC 提权场景）
         if let Ok(local) = std::env::var("LOCALAPPDATA") {
             candidates.push(
                 std::path::Path::new(&local)
@@ -378,7 +370,7 @@ pub fn patch_pi_coding_agent_silent() -> Option<std::path::PathBuf> {
         }
     }
 
-    // 3. macOS / Linux 已知路径
+    // macOS / Linux：常见全局路径
     #[cfg(any(target_os = "macos", target_os = "linux"))]
     {
         candidates.push(std::path::PathBuf::from("/usr/local/lib/node_modules"));
