@@ -2315,73 +2315,120 @@ pub fn scan_node_paths() -> Result<Value, String> {
     let mut found: Vec<Value> = vec![];
     let home = dirs::home_dir().unwrap_or_default();
 
-    let mut candidates: Vec<String> = vec![];
+    // 已收录路径去重（用 node 可执行文件的绝对路径）
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    // 尝试执行 node_bin，成功则加入结果
+    let try_add = |dir: &std::path::Path, found: &mut Vec<Value>, seen: &mut std::collections::HashSet<String>| {
+        #[cfg(target_os = "windows")]
+        let node_bin = dir.join("node.exe");
+        #[cfg(not(target_os = "windows"))]
+        let node_bin = dir.join("node");
+
+        if !node_bin.exists() { return; }
+        let key = node_bin.to_string_lossy().to_string();
+        if !seen.insert(key) { return; } // 已收录
+
+        let mut cmd = Command::new(&node_bin);
+        cmd.arg("--version");
+        #[cfg(target_os = "windows")]
+        cmd.creation_flags(0x08000000);
+        if let Ok(o) = cmd.output() {
+            if o.status.success() {
+                let ver = String::from_utf8_lossy(&o.stdout).trim().to_string();
+                let mut entry = serde_json::Map::new();
+                entry.insert("path".into(), Value::String(dir.to_string_lossy().to_string()));
+                entry.insert("version".into(), Value::String(ver));
+                found.push(Value::Object(entry));
+            }
+        }
+    };
+
+    // 枚举版本管理器目录下所有已安装版本
+    let scan_versions_dir = |versions_dir: &std::path::Path, bin_subpath: &str, found: &mut Vec<Value>, seen: &mut std::collections::HashSet<String>| {
+        if !versions_dir.is_dir() { return; }
+        if let Ok(entries) = std::fs::read_dir(versions_dir) {
+            for entry in entries.flatten() {
+                let bin = entry.path().join(bin_subpath);
+                try_add(&bin, found, seen);
+            }
+        }
+    };
 
     #[cfg(target_os = "windows")]
     {
         let pf = std::env::var("ProgramFiles").unwrap_or_else(|_| r"C:\Program Files".into());
-        let pf86 =
-            std::env::var("ProgramFiles(x86)").unwrap_or_else(|_| r"C:\Program Files (x86)".into());
+        let pf86 = std::env::var("ProgramFiles(x86)").unwrap_or_else(|_| r"C:\Program Files (x86)".into());
         let localappdata = std::env::var("LOCALAPPDATA").unwrap_or_default();
         let appdata = std::env::var("APPDATA").unwrap_or_default();
 
-        candidates.push(format!(r"{}\nodejs", pf));
-        candidates.push(format!(r"{}\nodejs", pf86));
-        if !localappdata.is_empty() {
-            candidates.push(format!(r"{}\Programs\nodejs", localappdata));
+        // 常规安装路径
+        for dir in &[
+            format!(r"{}\nodejs", pf),
+            format!(r"{}\nodejs", pf86),
+            format!(r"{}\Programs\nodejs", localappdata),
+            format!(r"{}\.volta\bin", home.display()),
+        ] {
+            try_add(std::path::Path::new(dir), &mut found, &mut seen);
         }
-        if !appdata.is_empty() {
-            candidates.push(format!(r"{}\npm", appdata));
-        }
-        candidates.push(format!(r"{}\.volta\bin", home.display()));
-        candidates.push(format!(r"{}\.nvm", home.display()));
 
+        // nvm-windows：枚举 %APPDATA%\nvm\vX.Y.Z\
+        let nvm_root = if let Ok(v) = std::env::var("NVM_HOME") {
+            std::path::PathBuf::from(v)
+        } else {
+            std::path::Path::new(&appdata).join("nvm")
+        };
+        scan_versions_dir(&nvm_root, "", &mut found, &mut seen);
+
+        // fnm (Windows)：枚举 %LOCALAPPDATA%\fnm\node-versions\vX.Y.Z\installation\
+        let fnm_base = std::env::var("FNM_DIR")
+            .ok()
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| std::path::Path::new(&localappdata).join("fnm"));
+        scan_versions_dir(&fnm_base.join("node-versions"), "installation", &mut found, &mut seen);
+
+        // 常见盘符
         for drive in &["C", "D", "E", "F", "G"] {
-            candidates.push(format!(r"{}:\nodejs", drive));
-            candidates.push(format!(r"{}:\Node", drive));
-            candidates.push(format!(r"{}:\Node.js", drive));
-            candidates.push(format!(r"{}:\Program Files\nodejs", drive));
-            // 扫描常见 AI 工具目录
-            candidates.push(format!(r"{}:\AI\Node", drive));
-            candidates.push(format!(r"{}:\AI\nodejs", drive));
-            candidates.push(format!(r"{}:\Dev\nodejs", drive));
-            candidates.push(format!(r"{}:\Tools\nodejs", drive));
+            for subdir in &["nodejs", "Node", "Node.js", r"Program Files\nodejs",
+                            r"AI\Node", r"AI\nodejs", r"Dev\nodejs", r"Tools\nodejs"] {
+                try_add(std::path::Path::new(&format!(r"{}:\{}", drive, subdir)), &mut found, &mut seen);
+            }
         }
     }
 
     #[cfg(not(target_os = "windows"))]
     {
-        candidates.push("/usr/local/bin".into());
-        candidates.push("/opt/homebrew/bin".into());
-        candidates.push(format!("{}/.nvm/current/bin", home.display()));
-        candidates.push(format!("{}/.volta/bin", home.display()));
-        candidates.push(format!("{}/.nodenv/shims", home.display()));
-        candidates.push(format!("{}/.fnm/current/bin", home.display()));
-        candidates.push(format!("{}/n/bin", home.display()));
-    }
-
-    for dir in &candidates {
-        let path = std::path::Path::new(dir);
-        #[cfg(target_os = "windows")]
-        let node_bin = path.join("node.exe");
-        #[cfg(not(target_os = "windows"))]
-        let node_bin = path.join("node");
-
-        if node_bin.exists() {
-            let mut cmd = Command::new(&node_bin);
-            cmd.arg("--version");
-            #[cfg(target_os = "windows")]
-            cmd.creation_flags(0x08000000);
-            if let Ok(o) = cmd.output() {
-                if o.status.success() {
-                    let ver = String::from_utf8_lossy(&o.stdout).trim().to_string();
-                    let mut entry = serde_json::Map::new();
-                    entry.insert("path".into(), Value::String(dir.clone()));
-                    entry.insert("version".into(), Value::String(ver));
-                    found.push(Value::Object(entry));
-                }
-            }
+        // 常规路径
+        for dir in &[
+            "/usr/local/bin".to_string(),
+            "/opt/homebrew/bin".to_string(),
+            format!("{}/.volta/bin", home.display()),
+            format!("{}/.nodenv/shims", home.display()),
+            format!("{}/n/bin", home.display()),
+            "/usr/bin".to_string(),
+        ] {
+            try_add(std::path::Path::new(dir), &mut found, &mut seen);
         }
+
+        // nvm：枚举 $NVM_DIR/versions/node/vX.Y.Z/bin/
+        let nvm_dir = std::env::var("NVM_DIR")
+            .ok()
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| home.join(".nvm"));
+        scan_versions_dir(&nvm_dir.join("versions/node"), "bin", &mut found, &mut seen);
+
+        // fnm：枚举 $FNM_DIR/node-versions/vX.Y.Z/installation/bin/
+        let fnm_dir = std::env::var("FNM_DIR")
+            .ok()
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| home.join(".local/share/fnm"));
+        scan_versions_dir(&fnm_dir.join("node-versions"), "installation/bin", &mut found, &mut seen);
+
+        // nodenv：枚举 ~/.nodenv/versions/X.Y.Z/bin/
+        scan_versions_dir(&home.join(".nodenv/versions"), "bin", &mut found, &mut seen);
+
+        // n (tj/n)：枚举 ~/n/versions/node/X.Y.Z/bin/
+        scan_versions_dir(&home.join("n/versions/node"), "bin", &mut found, &mut seen);
     }
 
     Ok(Value::Array(found))
