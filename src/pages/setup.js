@@ -108,7 +108,10 @@ function renderSteps(page, { node, git, cliOk, config, version }) {
         ${stepIcon(nodeOk)} Node.js 环境
       </div>
       ${nodeOk
-        ? `<p style="color:var(--success);font-size:var(--font-size-sm)">已安装 ${node.version || ''}</p>`
+        ? `<p style="color:var(--success);font-size:var(--font-size-sm);margin-bottom:4px">已安装 ${node.version || ''}
+            <button class="btn btn-secondary btn-sm" id="btn-scan-node" style="font-size:10px;padding:2px 8px;margin-left:8px">${icon('search', 12)} 切换版本</button>
+          </p>
+          <div id="scan-result" style="margin-top:4px;display:none"></div>`
         : `<p style="color:var(--text-secondary);font-size:var(--font-size-sm);margin-bottom:var(--space-sm)">
             OpenClaw 基于 Node.js 运行，请先安装。
           </p>
