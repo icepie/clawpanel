@@ -280,10 +280,9 @@ fn write_npm_gitconfig() -> Option<std::path::PathBuf> {
     let user_gitconfig = home.join(".gitconfig");
     let mut content = String::new();
     if user_gitconfig.exists() {
-        content.push_str(&format!(
-            "[include]\n\tpath = {}\n",
-            user_gitconfig.display()
-        ));
+        // gitconfig 路径中的 \ 是转义符，必须换成 / 或 \\
+        let path_str = user_gitconfig.to_string_lossy().replace('\\', "/");
+        content.push_str(&format!("[include]\n\tpath = {}\n", path_str));
     }
     content.push_str("[core]\n\taskPass =\n[protocol]\n\tallow = always\n");
 
