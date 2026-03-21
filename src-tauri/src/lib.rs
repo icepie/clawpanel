@@ -58,6 +58,10 @@ pub fn run() {
         .setup(|app| {
             service::start_backend_guardian(app.handle().clone());
             tray::setup_tray(app.handle())?;
+            // 静默修复已安装包中缺失的 changelog.js（汉化版已安装用户无需重装）
+            std::thread::spawn(|| {
+                commands::config::patch_pi_coding_agent_silent();
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

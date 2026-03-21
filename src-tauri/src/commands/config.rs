@@ -338,13 +338,10 @@ fn apply_git_install_env(cmd: &mut Command) {
         .env("NPM_CONFIG_FETCH_TIMEOUT", "120000");
 }
 
-/// 安装后补丁：修复缺失的 @mariozechner/pi-coding-agent/dist/utils/changelog.js。
-/// 该文件在某些版本的汉化包中未被打包，导致启动时 Cannot find module 报错。
-fn patch_pi_coding_agent(app: &tauri::AppHandle) {
-    use tauri::Emitter;
-
-    // 通过 `npm root -g` 获取全局 node_modules 目录
-    let npm_root = npm_command()
+/// 修复缺失的 @mariozechner/pi-coding-agent/dist/utils/changelog.js。
+/// 返回 Some(path) 表示成功写入，None 表示无需处理（已存在或包未安装）。
+pub fn patch_pi_coding_agent_silent() -> Option<std::path::PathBuf> {
+    let root = npm_command()
         .args(["root", "-g"])
         .output()
         .ok()
@@ -356,11 +353,7 @@ fn patch_pi_coding_agent(app: &tauri::AppHandle) {
             } else {
                 None
             }
-        });
-
-    let Some(root) = npm_root else {
-        return;
-    };
+        })?;
 
     let changelog_path = std::path::Path::new(&root)
         .join("@mariozechner")
@@ -369,13 +362,12 @@ fn patch_pi_coding_agent(app: &tauri::AppHandle) {
         .join("utils")
         .join("changelog.js");
 
-    // 仅在目录存在而文件缺失时才写入
     if changelog_path.exists() {
-        return;
+        return None;
     }
-    let parent = changelog_path.parent().unwrap();
+    let parent = changelog_path.parent()?;
     if !parent.exists() {
-        return; // 包本身没装，不需要 patch
+        return None;
     }
 
     let stub = r#"// changelog.js – auto-generated stub by ClawPanel
@@ -398,22 +390,18 @@ export const getLatestVersion = () => '';
 export const getChangelog = async () => [];
 "#;
 
-    match std::fs::write(&changelog_path, stub) {
-        Ok(_) => {
-            let _ = app.emit(
-                "upgrade-log",
-                format!(
-                    "✅ 已修复缺失模块: {}",
-                    changelog_path.display()
-                ),
-            );
-        }
-        Err(e) => {
-            let _ = app.emit(
-                "upgrade-log",
-                format!("⚠️ 补丁写入失败: {e}"),
-            );
-        }
+    std::fs::write(&changelog_path, stub).ok()?;
+    Some(changelog_path)
+}
+
+/// 安装后补丁：修复缺失的 changelog.js，并将结果通过 upgrade-log 反馈到前端。
+fn patch_pi_coding_agent(app: &tauri::AppHandle) {
+    use tauri::Emitter;
+    if let Some(path) = patch_pi_coding_agent_silent() {
+        let _ = app.emit(
+            "upgrade-log",
+            format!("✅ 已修复缺失模块: {}", path.display()),
+        );
     }
 }
 
