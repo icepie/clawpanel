@@ -2166,6 +2166,8 @@ async fn upgrade_openclaw_inner(
         {
             let _ = openclaw_command().args(["gateway", "stop"]).output();
         }
+        // 在启动 CLI 之前补丁缺失模块，确保 CLI 启动时文件已就绪
+        patch_pi_coding_agent(&app);
         // 重新安装（刷新后的 PATH 会找到新二进制）
         use crate::utils::openclaw_command_async;
         let gw_out = openclaw_command_async()
@@ -2186,7 +2188,7 @@ async fn upgrade_openclaw_inner(
     }
 
     let new_ver = get_local_version().await.unwrap_or_else(|| "未知".into());
-    // 安装后补丁：修复汉化版缺失的 changelog.js 模块
+    // 兜底补丁：覆盖"非切换源"安装路径（已存在则跳过，无副作用）
     patch_pi_coding_agent(&app);
     let msg = format!("✅ 安装完成，当前版本: {new_ver}");
     let _ = app.emit("upgrade-log", &msg);
