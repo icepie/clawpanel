@@ -341,7 +341,11 @@ fn apply_git_install_env(cmd: &mut Command) {
 /// 修复缺失的 @mariozechner/pi-coding-agent/dist/utils/changelog.js。
 /// 返回 Some(path) 表示成功写入，None 表示无需处理（已存在或包未安装）。
 pub fn patch_pi_coding_agent_silent() -> Option<std::path::PathBuf> {
-    let root = npm_command()
+    // 尝试多个候选的 node_modules 根目录
+    let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+
+    // 1. npm root -g
+    if let Some(root) = npm_command()
         .args(["root", "-g"])
         .output()
         .ok()
@@ -353,21 +357,34 @@ pub fn patch_pi_coding_agent_silent() -> Option<std::path::PathBuf> {
             } else {
                 None
             }
-        })?;
-
-    let changelog_path = std::path::Path::new(&root)
-        .join("@mariozechner")
-        .join("pi-coding-agent")
-        .join("dist")
-        .join("utils")
-        .join("changelog.js");
-
-    if changelog_path.exists() {
-        return None;
+        })
+    {
+        candidates.push(std::path::PathBuf::from(root));
     }
-    let parent = changelog_path.parent()?;
-    if !parent.exists() {
-        return None;
+
+    // 2. Windows 已知安装路径
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(local) = std::env::var("LOCALAPPDATA") {
+            candidates.push(
+                std::path::Path::new(&local)
+                    .join("Programs")
+                    .join("OpenClaw")
+                    .join("node_modules"),
+            );
+        }
+        if let Ok(appdata) = std::env::var("APPDATA") {
+            candidates.push(std::path::Path::new(&appdata).join("npm").join("node_modules"));
+        }
+    }
+
+    // 3. macOS / Linux 已知路径
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    {
+        candidates.push(std::path::PathBuf::from("/usr/local/lib/node_modules"));
+        if let Some(home) = dirs::home_dir() {
+            candidates.push(home.join(".npm-global").join("lib").join("node_modules"));
+        }
     }
 
     let stub = r#"// changelog.js – auto-generated stub by ClawPanel
@@ -390,8 +407,28 @@ export const getLatestVersion = () => '';
 export const getChangelog = async () => [];
 "#;
 
-    std::fs::write(&changelog_path, stub).ok()?;
-    Some(changelog_path)
+    for root in &candidates {
+        let pkg_dir = root.join("@mariozechner").join("pi-coding-agent");
+        if !pkg_dir.exists() {
+            continue; // 该位置没有安装此包
+        }
+
+        let changelog_path = pkg_dir.join("dist").join("utils").join("changelog.js");
+        if changelog_path.exists() {
+            return None; // 已存在，无需修复
+        }
+
+        // dist/utils/ 目录可能不存在，一并创建
+        if let Some(parent) = changelog_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+
+        if std::fs::write(&changelog_path, stub).is_ok() {
+            return Some(changelog_path);
+        }
+    }
+
+    None
 }
 
 /// 安装后补丁：修复缺失的 changelog.js，并将结果通过 upgrade-log 反馈到前端。
