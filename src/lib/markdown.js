@@ -89,6 +89,8 @@ export function renderMarkdown(text) {
   const result = []
   let inList = false
   let listType = ''
+  let inTable = false
+  let tableRows = []
 
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i]
@@ -98,6 +100,38 @@ export function renderMarkdown(text) {
       result.push(line)
       while (i < lines.length - 1 && !lines[i].includes('</pre>')) { i++; result.push(lines[i]) }
       continue
+    }
+
+    // 表格检测：表头分隔行 (|---|...|)
+    const isTableSeparator = /^\s*\|[\s\-:|]+\|\s*$/.test(line) || 
+                             /^\s*[\-:]+(\s*\|\s*[\-:]+)+\s*$/.test(line)
+    
+    // 检测是否可能是表格行
+    const isTableRow = /^\s*\|.*\|\s*$/.test(line) || 
+                       /^\s*[^\|]+\s*\|\s*[^\|]+/.test(line)
+    
+    // 如果在表格中，继续收集行
+    if (inTable) {
+      if (isTableRow && line.trim() !== '') {
+        tableRows.push(line)
+        continue
+      } else {
+        // 表格结束，渲染表格
+        result.push(renderTable(tableRows))
+        inTable = false
+        tableRows = []
+      }
+    }
+    
+    // 检测表格开始：当前行是表格行，且下一行是分隔行
+    if (!inTable && isTableRow && i + 1 < lines.length) {
+      const nextLine = lines[i + 1]
+      if (/^\s*\|[\s\-:|]+\|\s*$/.test(nextLine) || 
+          /^\s*[\-:]+(\s*\|\s*[\-:]+)+\s*$/.test(nextLine)) {
+        inTable = true
+        tableRows.push(line)
+        continue
+      }
     }
 
     // 标题
@@ -138,7 +172,67 @@ export function renderMarkdown(text) {
   }
 
   if (inList) result.push(`</${listType}>`)
+  // 处理剩余的表格
+  if (inTable && tableRows.length > 0) {
+    result.push(renderTable(tableRows))
+  }
   return result.join('\n')
+}
+
+/**
+ * 渲染 Markdown 表格
+ * @param {string[]} rows - 表格行数组
+ * @returns {string} HTML 表格
+ */
+function renderTable(rows) {
+  if (!rows || rows.length < 2) return ''
+  
+  const table = ['<table>']
+  let isHeaderRow = true
+  let hasSeparator = false
+  
+  for (let i = 0; i < rows.length; i++) {
+    let row = rows[i].trim()
+    
+    // 跳过空行
+    if (!row) continue
+    // 检测分隔行 (|---|...|)
+    const isSeparator = /^\s*\|[\s\-:|]+\|\s*$/.test(row) || 
+                        /^\s*[\-:]+(\s*\|\s*[\-:]+)+\s*$/.test(row)
+    if (isSeparator) {
+      hasSeparator = true
+      continue
+    }
+    
+    // 解析单元格
+    let cells = []
+    if (row.startsWith('|') && row.endsWith('|')) {
+      // 标准格式: | cell1 | cell2 |
+      cells = row.slice(1, -1).split('|')
+    } else {
+      // 简化格式: cell1 | cell2
+      cells = row.split('|')
+    }
+    // 清理单元格内容
+    cells = cells.map(cell => inlineFormat(cell.trim()))
+    if (cells.length === 0) continue
+    
+    // 渲染行
+    const tag = isHeaderRow && !hasSeparator && i === 0 ? 'th' : 'td'
+    table.push('  <tr>')
+    cells.forEach(cell => {
+      table.push(`    <${tag}>${cell}</${tag}>`)
+    })
+    table.push('  </tr>')
+    
+    // 第一行后切换到数据行（如果有分隔行）
+    if (hasSeparator && i === 0) {
+      isHeaderRow = false
+    }
+  }
+  
+  table.push('</table>')
+  return table.join('\n')
 }
 
 function inlineFormat(text) {
