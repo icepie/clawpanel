@@ -186,26 +186,24 @@ pub fn refresh_enhanced_path() {
 }
 
 fn build_enhanced_path() -> String {
-    let current = std::env::var("PATH").unwrap_or_default();
     let home = dirs::home_dir().unwrap_or_default();
 
-    // 读取用户保存的自定义 Node.js 路径
-    let custom_path = openclaw_dir()
-        .join("clawpanel.json")
-        .exists()
-        .then(|| {
-            std::fs::read_to_string(openclaw_dir().join("clawpanel.json"))
-                .ok()
-                .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
-                .and_then(|v| v.get("nodePath")?.as_str().map(String::from))
-        })
-        .flatten();
+    // 读取用户自定义 Node.js 路径（复用已有函数，只读一次文件）
+    let custom_path = read_panel_config_value()
+        .and_then(|v| v.get("nodePath")?.as_str().map(String::from));
 
     #[cfg(target_os = "macos")]
     {
-        // 版本管理器路径优先于系统路径，确保 nvm/volta/fnm 管理的 Node.js 版本被优先检测到
+        let current = std::env::var("PATH").unwrap_or_default();
+
+        // nvm: 使用 NVM_DIR 环境变量（兼容自定义位置），默认 ~/.nvm
+        let nvm_dir = std::env::var("NVM_DIR")
+            .ok()
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| home.join(".nvm"));
+
         let mut extra: Vec<String> = vec![
-            format!("{}/.nvm/current/bin", home.display()),
+            nvm_dir.join("current/bin").to_string_lossy().to_string(),
             format!("{}/.volta/bin", home.display()),
             format!("{}/.nodenv/shims", home.display()),
             format!("{}/n/bin", home.display()),
@@ -213,30 +211,28 @@ fn build_enhanced_path() -> String {
             "/usr/local/bin".into(),
             "/opt/homebrew/bin".into(),
         ];
-        // NPM_CONFIG_PREFIX: 用户通过 npm config set prefix 自定义的全局安装路径
+
         if let Ok(prefix) = std::env::var("NPM_CONFIG_PREFIX") {
             extra.push(format!("{}/bin", prefix));
         }
-        // 扫描 nvm 实际安装的版本目录（兼容无 current 符号链接的情况）
-        let nvm_versions = home.join(".nvm/versions/node");
+
+        // 枚举 nvm 所有已安装版本（兼容无 current 符号链接的情况）
+        let nvm_versions = nvm_dir.join("versions/node");
         if nvm_versions.is_dir() {
             if let Ok(entries) = std::fs::read_dir(&nvm_versions) {
                 for entry in entries.flatten() {
-                    let bin = entry.path().join("bin");
-                    if bin.is_dir() {
-                        extra.push(bin.to_string_lossy().to_string());
-                    }
+                    extra.push(entry.path().join("bin").to_string_lossy().to_string());
                 }
             }
         }
-        // fnm: 扫描 $FNM_DIR 或默认 ~/.local/share/fnm 下的版本目录
+
+        // fnm
         let fnm_dir = std::env::var("FNM_DIR")
             .ok()
             .map(std::path::PathBuf::from)
             .unwrap_or_else(|| home.join(".local/share/fnm"));
-        let fnm_versions = fnm_dir.join("node-versions");
-        if fnm_versions.is_dir() {
-            if let Ok(entries) = std::fs::read_dir(&fnm_versions) {
+        if fnm_dir.join("node-versions").is_dir() {
+            if let Ok(entries) = std::fs::read_dir(fnm_dir.join("node-versions")) {
                 for entry in entries.flatten() {
                     let bin = entry.path().join("installation/bin");
                     if bin.is_dir() {
@@ -245,22 +241,21 @@ fn build_enhanced_path() -> String {
                 }
             }
         }
-        let mut parts: Vec<&str> = vec![];
-        if let Some(ref cp) = custom_path {
-            parts.push(cp.as_str());
-        }
-        parts.extend(extra.iter().map(|s| s.as_str()));
-        if !current.is_empty() {
-            parts.push(&current);
-        }
-        parts.join(":")
+
+        collect_path_unix(&custom_path, &extra, &current)
     }
 
     #[cfg(target_os = "linux")]
     {
-        // 版本管理器路径优先于系统路径，确保 nvm/volta/fnm 管理的 Node.js 版本被优先检测到
+        let current = std::env::var("PATH").unwrap_or_default();
+
+        let nvm_dir = std::env::var("NVM_DIR")
+            .ok()
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| home.join(".nvm"));
+
         let mut extra: Vec<String> = vec![
-            format!("{}/.nvm/current/bin", home.display()),
+            nvm_dir.join("current/bin").to_string_lossy().to_string(),
             format!("{}/.volta/bin", home.display()),
             format!("{}/.nodenv/shims", home.display()),
             format!("{}/n/bin", home.display()),
@@ -270,34 +265,26 @@ fn build_enhanced_path() -> String {
             "/usr/bin".into(),
             "/snap/bin".into(),
         ];
-        // NPM_CONFIG_PREFIX: 用户通过 npm config set prefix 自定义的全局安装路径
+
         if let Ok(prefix) = std::env::var("NPM_CONFIG_PREFIX") {
             extra.push(format!("{}/bin", prefix));
         }
-        // NVM_DIR 环境变量（用户可能自定义了 nvm 安装目录）
-        let nvm_dir = std::env::var("NVM_DIR")
-            .ok()
-            .map(std::path::PathBuf::from)
-            .unwrap_or_else(|| home.join(".nvm"));
+
         let nvm_versions = nvm_dir.join("versions/node");
         if nvm_versions.is_dir() {
             if let Ok(entries) = std::fs::read_dir(&nvm_versions) {
                 for entry in entries.flatten() {
-                    let bin = entry.path().join("bin");
-                    if bin.is_dir() {
-                        extra.push(bin.to_string_lossy().to_string());
-                    }
+                    extra.push(entry.path().join("bin").to_string_lossy().to_string());
                 }
             }
         }
-        // fnm: 扫描 $FNM_DIR 或默认 ~/.local/share/fnm 下的版本目录
+
         let fnm_dir = std::env::var("FNM_DIR")
             .ok()
             .map(std::path::PathBuf::from)
             .unwrap_or_else(|| home.join(".local/share/fnm"));
-        let fnm_versions = fnm_dir.join("node-versions");
-        if fnm_versions.is_dir() {
-            if let Ok(entries) = std::fs::read_dir(&fnm_versions) {
+        if fnm_dir.join("node-versions").is_dir() {
+            if let Ok(entries) = std::fs::read_dir(fnm_dir.join("node-versions")) {
                 for entry in entries.flatten() {
                     let bin = entry.path().join("installation/bin");
                     if bin.is_dir() {
@@ -306,7 +293,8 @@ fn build_enhanced_path() -> String {
                 }
             }
         }
-        // nodesource / 手动安装的 Node.js 可能在 /usr/local/lib/nodejs/ 下
+
+        // nodesource / 手动安装
         let nodejs_lib = std::path::Path::new("/usr/local/lib/nodejs");
         if nodejs_lib.is_dir() {
             if let Ok(entries) = std::fs::read_dir(nodejs_lib) {
@@ -318,15 +306,8 @@ fn build_enhanced_path() -> String {
                 }
             }
         }
-        let mut parts: Vec<&str> = vec![];
-        if let Some(ref cp) = custom_path {
-            parts.push(cp.as_str());
-        }
-        parts.extend(extra.iter().map(|s| s.as_str()));
-        if !current.is_empty() {
-            parts.push(&current);
-        }
-        parts.join(":")
+
+        collect_path_unix(&custom_path, &extra, &current)
     }
 
     #[cfg(target_os = "windows")]
@@ -337,38 +318,45 @@ fn build_enhanced_path() -> String {
         let localappdata = std::env::var("LOCALAPPDATA").unwrap_or_default();
         let appdata = std::env::var("APPDATA").unwrap_or_default();
 
-        // 从注册表读取最新 PATH（绕过进程启动时的环境变量快照）
-        let current = read_windows_path_from_registry().unwrap_or(current);
+        // 从注册表读取最新 PATH 并展开 %VAR% 变量
+        let current = read_windows_path_from_registry()
+            .map(|p| expand_env_vars_windows(&p))
+            .unwrap_or_else(|| std::env::var("PATH").unwrap_or_default());
 
-        // 版本管理器路径优先，确保 nvm/volta/fnm 管理的 Node.js 被优先检测到
+        // NVM_SYMLINK / NVM_HOME / FNM_DIR 也从注册表读，避免进程快照问题
+        let nvm_symlink = read_windows_user_env("NVM_SYMLINK")
+            .or_else(|| std::env::var("NVM_SYMLINK").ok());
+        let nvm_home = read_windows_user_env("NVM_HOME")
+            .or_else(|| std::env::var("NVM_HOME").ok());
+        let fnm_dir_reg = read_windows_user_env("FNM_DIR")
+            .or_else(|| std::env::var("FNM_DIR").ok());
+
         let mut extra: Vec<String> = vec![];
 
-        // 1. NVM_SYMLINK（nvm-windows 活跃版本符号链接，如 D:\nodejs）—— 最高优先级
-        if let Ok(nvm_symlink) = std::env::var("NVM_SYMLINK") {
-            let symlink_path = std::path::Path::new(&nvm_symlink);
-            if symlink_path.is_dir() {
-                extra.push(nvm_symlink.clone());
+        // 1. NVM_SYMLINK（nvm-windows 活跃版本符号链接）—— 最高优先级
+        if let Some(ref sym) = nvm_symlink {
+            if std::path::Path::new(sym).is_dir() {
+                extra.push(sym.clone());
             }
         }
-        // 2. NVM_HOME（用户自定义 nvm 安装目录）
-        if let Ok(nvm_home) = std::env::var("NVM_HOME") {
-            let nvm_path = std::path::Path::new(&nvm_home);
-            if nvm_path.is_dir() {
-                if let Ok(entries) = std::fs::read_dir(nvm_path) {
-                    for entry in entries.flatten() {
-                        let p = entry.path();
-                        if p.is_dir() && p.join("node.exe").exists() {
-                            extra.push(p.to_string_lossy().to_string());
-                        }
+
+        // 2. NVM_HOME —— 枚举所有已安装版本
+        if let Some(ref nvm_home) = nvm_home {
+            if let Ok(entries) = std::fs::read_dir(nvm_home) {
+                for entry in entries.flatten() {
+                    let p = entry.path();
+                    if p.is_dir() && p.join("node.exe").exists() {
+                        extra.push(p.to_string_lossy().to_string());
                     }
                 }
             }
         }
-        // 3. %APPDATA%\nvm（nvm-windows 默认安装目录）
+
+        // 3. %APPDATA%\nvm（nvm-windows 默认）—— 枚举版本子目录
         if !appdata.is_empty() {
-            extra.push(format!(r"{}\nvm", appdata));
             let nvm_dir = std::path::Path::new(&appdata).join("nvm");
             if nvm_dir.is_dir() {
+                extra.push(nvm_dir.to_string_lossy().to_string());
                 if let Ok(entries) = std::fs::read_dir(&nvm_dir) {
                     for entry in entries.flatten() {
                         let p = entry.path();
@@ -379,16 +367,22 @@ fn build_enhanced_path() -> String {
                 }
             }
         }
+
         // 4. volta
         extra.push(format!(r"{}\.volta\bin", home.display()));
-        // 5. fnm
-        if !localappdata.is_empty() {
-            extra.push(format!(r"{}\fnm_multishells", localappdata));
-        }
-        let fnm_base = std::env::var("FNM_DIR")
-            .ok()
+
+        // 5. fnm —— 枚举版本目录
+        let fnm_base = fnm_dir_reg
+            .as_deref()
             .map(std::path::PathBuf::from)
-            .unwrap_or_else(|| std::path::Path::new(&appdata).join("fnm"));
+            .unwrap_or_else(|| {
+                // fnm 默认: %LOCALAPPDATA%\fnm
+                if !localappdata.is_empty() {
+                    std::path::Path::new(&localappdata).join("fnm")
+                } else {
+                    std::path::Path::new(&appdata).join("fnm")
+                }
+            });
         let fnm_versions = fnm_base.join("node-versions");
         if fnm_versions.is_dir() {
             if let Ok(entries) = std::fs::read_dir(&fnm_versions) {
@@ -400,17 +394,20 @@ fn build_enhanced_path() -> String {
                 }
             }
         }
-        // 6. npm 全局（openclaw.cmd 通常在这里）
+
+        // 6. npm 全局
         if !appdata.is_empty() {
             extra.push(format!(r"{}\npm", appdata));
         }
-        // 7. 系统默认 Node.js 安装路径（优先级最低）
+
+        // 7. 系统默认 Node.js 安装路径
         extra.push(format!(r"{}\nodejs", pf));
         extra.push(format!(r"{}\nodejs", pf86));
         if !localappdata.is_empty() {
             extra.push(format!(r"{}\Programs\nodejs", localappdata));
         }
-        // 8. 扫描常见盘符下的 Node 安装（用户可能装在 D:\、F:\ 等）
+
+        // 8. 扫描常见盘符
         for drive in &["C", "D", "E", "F"] {
             extra.push(format!(r"{}:\nodejs", drive));
             extra.push(format!(r"{}:\Node", drive));
@@ -418,22 +415,91 @@ fn build_enhanced_path() -> String {
         }
 
         let mut parts: Vec<&str> = vec![];
-        // 用户自定义路径优先级最高
         if let Some(ref cp) = custom_path {
             parts.push(cp.as_str());
         }
-        // 然后是默认扫描到的路径
         for p in &extra {
             if std::path::Path::new(p).exists() {
                 parts.push(p.as_str());
             }
         }
-        // 最后是系统 PATH
         if !current.is_empty() {
             parts.push(&current);
         }
         parts.join(";")
     }
+}
+
+/// Unix 路径合并：自定义路径 → extra → 系统 PATH，去重保留顺序
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn collect_path_unix(custom: &Option<String>, extra: &[String], current: &str) -> String {
+    let mut seen = std::collections::HashSet::new();
+    let mut parts: Vec<String> = vec![];
+
+    let mut push = |s: &str| {
+        if !s.is_empty() && seen.insert(s.to_string()) {
+            parts.push(s.to_string());
+        }
+    };
+
+    if let Some(ref cp) = custom {
+        push(cp.as_str());
+    }
+    for p in extra {
+        push(p.as_str());
+    }
+    for seg in current.split(':') {
+        push(seg);
+    }
+    parts.join(":")
+}
+
+/// Windows: 展开路径字符串中的 %VARNAME% 环境变量引用
+#[cfg(target_os = "windows")]
+fn expand_env_vars_windows(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '%' {
+            let mut var_name = String::new();
+            let mut found_close = false;
+            for inner in chars.by_ref() {
+                if inner == '%' {
+                    found_close = true;
+                    break;
+                }
+                var_name.push(inner);
+            }
+            if found_close && !var_name.is_empty() {
+                if let Ok(val) = std::env::var(&var_name) {
+                    result.push_str(&val);
+                } else {
+                    // 变量不存在，原样保留
+                    result.push('%');
+                    result.push_str(&var_name);
+                    result.push('%');
+                }
+            } else {
+                result.push('%');
+                result.push_str(&var_name);
+            }
+        } else {
+            result.push(c);
+        }
+    }
+    result
+}
+
+/// Windows: 从注册表用户 Environment 键读取指定环境变量
+#[cfg(target_os = "windows")]
+fn read_windows_user_env(name: &str) -> Option<String> {
+    use winreg::enums::{HKEY_CURRENT_USER, KEY_READ};
+    use winreg::RegKey;
+    RegKey::predef(HKEY_CURRENT_USER)
+        .open_subkey_with_flags(r"Environment", KEY_READ)
+        .ok()?
+        .get_value(name)
+        .ok()
 }
 
 /// 从 Windows 注册表读取最新的 PATH 环境变量
