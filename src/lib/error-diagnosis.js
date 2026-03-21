@@ -4,8 +4,27 @@
  */
 
 const NPM_CMD = 'npm install -g @qingchencloud/openclaw-zh --registry https://registry.npmmirror.com'
-const GIT_HTTPS_CMD = 'git config --global url."https://github.com/".insteadOf ssh://git@github.com/ && git config --global --add url."https://github.com/".insteadOf ssh://git@github.com && git config --global --add url."https://github.com/".insteadOf ssh://git@://github.com/ && git config --global --add url."https://github.com/".insteadOf git@github.com: && git config --global --add url."https://github.com/".insteadOf git://github.com/ && git config --global --add url."https://github.com/".insteadOf git+ssh://git@github.com/'
-const GIT_HTTPS_ROOT_CMD = 'sudo git config --global url."https://github.com/".insteadOf ssh://git@github.com/ && sudo git config --global --add url."https://github.com/".insteadOf ssh://git@github.com && sudo git config --global --add url."https://github.com/".insteadOf ssh://git@://github.com/ && sudo git config --global --add url."https://github.com/".insteadOf git@github.com: && sudo git config --global --add url."https://github.com/".insteadOf git://github.com/ && sudo git config --global --add url."https://github.com/".insteadOf git+ssh://git@github.com/'
+
+function joinCommands(...cmds) {
+  return cmds.filter(Boolean).join('\n')
+}
+
+const GIT_HTTPS_CMD = joinCommands(
+  'git config --global url."https://github.com/".insteadOf ssh://git@github.com/',
+  'git config --global --add url."https://github.com/".insteadOf ssh://git@github.com',
+  'git config --global --add url."https://github.com/".insteadOf ssh://git@://github.com/',
+  'git config --global --add url."https://github.com/".insteadOf git@github.com:',
+  'git config --global --add url."https://github.com/".insteadOf git://github.com/',
+  'git config --global --add url."https://github.com/".insteadOf git+ssh://git@github.com/',
+)
+const GIT_HTTPS_ROOT_CMD = joinCommands(
+  'sudo git config --global url."https://github.com/".insteadOf ssh://git@github.com/',
+  'sudo git config --global --add url."https://github.com/".insteadOf ssh://git@github.com',
+  'sudo git config --global --add url."https://github.com/".insteadOf ssh://git@://github.com/',
+  'sudo git config --global --add url."https://github.com/".insteadOf git@github.com:',
+  'sudo git config --global --add url."https://github.com/".insteadOf git://github.com/',
+  'sudo git config --global --add url."https://github.com/".insteadOf git+ssh://git@github.com/',
+)
 
 /**
  * @param {string} errStr - npm 错误输出（可含流式日志）
@@ -85,7 +104,10 @@ export function diagnoseInstallError(errStr) {
       return {
         title: '安装失败 — npm 全局目录异常',
         hint: `npm 全局安装目录可能不存在或损坏（${missingPath}）。\n请先修复 npm 目录，再重试安装：`,
-        command: 'npm config set prefix "%APPDATA%\\npm" && ' + NPM_CMD,
+        command: joinCommands(
+          'npm config set prefix "%APPDATA%\\npm"',
+          NPM_CMD,
+        ),
       }
     }
     return {
@@ -110,7 +132,10 @@ export function diagnoseInstallError(errStr) {
     return {
       title: '安装不完整',
       hint: '上次安装可能中断了。先清理残留再重装：',
-      command: 'npm cache clean --force && ' + NPM_CMD,
+      command: joinCommands(
+        'npm cache clean --force',
+        NPM_CMD,
+      ),
     }
   }
 
@@ -126,7 +151,10 @@ export function diagnoseInstallError(errStr) {
         ? '检测到代理/证书问题。如果你使用了 VPN 或公司代理，请尝试关闭后重试，或设置 npm 信任证书：'
         : '无法连接到 npm 仓库。请检查网络连接，或尝试使用国内镜像源：',
       command: isProxy
-        ? 'npm config set strict-ssl false && ' + NPM_CMD
+        ? joinCommands(
+            'npm config set strict-ssl false',
+            NPM_CMD,
+          )
         : NPM_CMD,
     }
   }
@@ -138,7 +166,10 @@ export function diagnoseInstallError(errStr) {
     return {
       title: '安装失败 — npm 缓存异常',
       hint: '本地缓存可能损坏。清理缓存后重试：',
-      command: 'npm cache clean --force && ' + NPM_CMD,
+      command: joinCommands(
+        'npm cache clean --force',
+        NPM_CMD,
+      ),
     }
   }
 
@@ -156,7 +187,10 @@ export function diagnoseInstallError(errStr) {
     return {
       title: '安装失败 — npm 异常',
       hint: 'npm 自身可能异常。尝试更新 npm 后重试：',
-      command: 'npm install -g npm@latest && ' + NPM_CMD,
+      command: joinCommands(
+        'npm install -g npm@latest',
+        NPM_CMD,
+      ),
     }
   }
 
