@@ -98,8 +98,10 @@ function stepIcon(ok) {
 function renderSteps(page, { node, git, cliOk, config, version, nodeVersions = [] }) {
   const stepsEl = page.querySelector('#setup-steps')
   const nodeOk = node.installed
+  const nodeMajor = nodeOk ? parseInt((node.version || '').replace(/^v/, ''), 10) : 0
+  const nodeTooOld = nodeOk && nodeMajor > 0 && nodeMajor < 22
   const gitOk = git?.installed || false
-  const allOk = nodeOk && cliOk && config.installed
+  const allOk = nodeOk && !nodeTooOld && cliOk && config.installed
 
   let html = ''
 
@@ -107,28 +109,36 @@ function renderSteps(page, { node, git, cliOk, config, version, nodeVersions = [
   html += `
     <div class="config-section" style="text-align:left">
       <div class="config-section-title" style="display:flex;align-items:center;gap:4px">
-        ${stepIcon(nodeOk)} Node.js 环境
+        ${stepIcon(nodeOk && !nodeTooOld)} Node.js 环境
       </div>
       ${nodeOk
-        ? `<p style="color:var(--success);font-size:var(--font-size-sm);margin-bottom:4px">已安装 ${node.version || ''}
+        ? `<p style="color:${nodeTooOld ? 'var(--warning)' : 'var(--success)'};font-size:var(--font-size-sm);margin-bottom:4px">已安装 ${node.version || ''}
             <button class="btn btn-secondary btn-sm" id="btn-scan-node" style="font-size:10px;padding:2px 8px;margin-left:8px">${icon('search', 12)} 切换版本</button>
           </p>
+          ${nodeTooOld ? `<p style="color:var(--warning);font-size:var(--font-size-xs);margin:0 0 6px;padding:6px 10px;background:var(--bg-tertiary);border-radius:var(--radius-sm);border-left:3px solid var(--warning)">
+            ⚠ Node.js ${node.version} 版本过低，OpenClaw 需要 v22 或更高版本。请升级 Node.js 或在下方切换到更高版本。
+          </p>` : ''}
           ${nodeVersions.length > 1
             ? `<div id="scan-result" style="margin-top:4px;display:block">
                 <div style="font-size:var(--font-size-xs);color:var(--text-tertiary);margin-bottom:4px">检测到 ${nodeVersions.length} 个 Node.js 版本，当前使用 ${node.version}：</div>
-                ${nodeVersions.map(r =>
-                  `<div style="display:flex;align-items:center;gap:6px;margin-top:4px">
-                    <span style="${r.version === node.version ? 'color:var(--success)' : 'color:var(--text-tertiary)'}">
-                      ${r.version === node.version ? '●' : '○'}
+                ${nodeVersions.map(r => {
+                  const major = parseInt((r.version || '').replace(/^v/, ''), 10)
+                  const tooOld = major > 0 && major < 22
+                  const isCurrent = r.version === node.version
+                  return `<div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+                    <span style="color:${isCurrent ? 'var(--success)' : 'var(--text-tertiary)'}">
+                      ${isCurrent ? '●' : '○'}
                     </span>
                     <code style="flex:1;background:var(--bg-secondary);padding:2px 6px;border-radius:3px;font-size:11px">${r.path}</code>
-                    <span style="font-size:11px;color:var(--text-tertiary)">${r.version}</span>
-                    ${r.version === node.version
+                    <span style="font-size:11px;color:${tooOld ? 'var(--warning)' : 'var(--text-tertiary)'}">
+                      ${r.version}${tooOld ? ' ⚠ 版本过低' : ''}
+                    </span>
+                    ${isCurrent
                       ? `<span style="font-size:10px;color:var(--success);padding:2px 8px">当前</span>`
-                      : `<button class="btn btn-primary btn-sm btn-use-path" data-path="${r.path}" style="font-size:10px;padding:2px 8px">使用</button>`
+                      : `<button class="btn btn-primary btn-sm btn-use-path" data-path="${r.path}" style="font-size:10px;padding:2px 8px"${tooOld ? ' title="此版本过低，建议选择 v22+"' : ''}>使用</button>`
                     }
                   </div>`
-                ).join('')}
+                }).join('')}
               </div>`
             : `<div id="scan-result" style="margin-top:4px;display:none"></div>`
           }`
