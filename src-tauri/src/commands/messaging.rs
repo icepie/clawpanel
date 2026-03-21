@@ -70,17 +70,14 @@ pub async fn read_platform_config(
 
     // 从已有配置中提取用户可编辑字段
     // 多账号模式：优先从 accounts.<account_id> 读取
-    let channel_val = cfg
-        .get("channels")
-        .and_then(|c| c.get(storage_key));
+    let channel_val = cfg.get("channels").and_then(|c| c.get(storage_key));
 
     let saved = match (&account_id, channel_val) {
-        (Some(acct), Some(ch)) if !acct.is_empty() => {
-            ch.get("accounts")
-                .and_then(|a| a.get(acct.as_str()))
-                .cloned()
-                .unwrap_or(Value::Null)
-        }
+        (Some(acct), Some(ch)) if !acct.is_empty() => ch
+            .get("accounts")
+            .and_then(|a| a.get(acct.as_str()))
+            .cloned()
+            .unwrap_or(Value::Null),
         (_, Some(ch)) => ch.clone(),
         _ => Value::Null,
     };
@@ -471,10 +468,7 @@ pub async fn remove_messaging_platform(
     match &account_id {
         Some(acct) if !acct.is_empty() => {
             // 多账号模式：仅删除指定账号
-            if let Some(channel) = cfg
-                .get_mut("channels")
-                .and_then(|c| c.get_mut(storage_key))
-            {
+            if let Some(channel) = cfg.get_mut("channels").and_then(|c| c.get_mut(storage_key)) {
                 if let Some(accounts) = channel.get_mut("accounts").and_then(|a| a.as_object_mut())
                 {
                     accounts.remove(acct.as_str());
