@@ -1,4 +1,4 @@
-import { api } from '../lib/tauri-api.js'
+import { api, invalidate } from '../lib/tauri-api.js'
 import { toast } from '../components/toast.js'
 import { showUpgradeModal, showConfirm } from '../components/modal.js'
 import { setUpgrading } from '../lib/app-state.js'
@@ -116,7 +116,11 @@ async function loadData(page) {
         const confirmed = await showConfirm('确定要卸载 OpenClaw 吗？\n\n这将停止 Gateway 服务并卸载 npm 全局包。\n配置文件（~/.openclaw/）默认保留，可稍后手动删除。')
         if (!confirmed) return
         const modal = showUpgradeModal('卸载 OpenClaw')
-        modal.onClose(() => loadData(page))
+        modal.onClose(() => {
+          invalidate('check_installation', 'get_services_status', 'check_node', 'check_git')
+          api.invalidatePathCache().catch(() => {})
+          loadData(page)
+        })
         modal.appendLog('开始卸载 OpenClaw...')
         let unlistenLog, unlistenProgress, unlistenDone, unlistenError
         const cleanup = () => { unlistenLog?.(); unlistenProgress?.(); unlistenDone?.(); unlistenError?.() }
@@ -125,7 +129,12 @@ async function loadData(page) {
             const { listen } = await import('@tauri-apps/api/event')
             unlistenLog = await listen('upgrade-log', (e) => modal.appendLog(e.payload))
             unlistenProgress = await listen('upgrade-progress', (e) => modal.setProgress(e.payload))
-            unlistenDone = await listen('upgrade-done', (e) => { cleanup(); modal.setDone(typeof e.payload === 'string' ? e.payload : '卸载完成') })
+            unlistenDone = await listen('upgrade-done', (e) => {
+              cleanup()
+              invalidate('check_installation', 'get_services_status', 'check_node', 'check_git')
+              api.invalidatePathCache().catch(() => {})
+              modal.setDone(typeof e.payload === 'string' ? e.payload : '卸载完成')
+            })
             unlistenError = await listen('upgrade-error', (e) => { cleanup(); modal.setError('卸载失败: ' + (e.payload || '未知错误')) })
             await api.uninstallOpenclaw(false)
             modal.appendLog('后台卸载任务已启动...')
@@ -329,7 +338,11 @@ async function showVersionPicker(page, currentVersion) {
  */
 async function doInstall(page, title, source, version) {
   const modal = showUpgradeModal(title)
-  modal.onClose(() => loadData(page))
+  modal.onClose(() => {
+    invalidate('check_installation', 'get_services_status', 'check_node', 'check_git')
+    api.invalidatePathCache().catch(() => {})
+    loadData(page)
+  })
   let unlistenLog, unlistenProgress, unlistenDone, unlistenError
   setUpgrading(true)
 
@@ -346,6 +359,8 @@ async function doInstall(page, title, source, version) {
 
       unlistenDone = await listen('upgrade-done', (e) => {
         cleanup()
+        invalidate('check_installation', 'get_services_status', 'check_node', 'check_git')
+        api.invalidatePathCache().catch(() => {})
         modal.setDone(typeof e.payload === 'string' ? e.payload : '操作完成')
       })
 
