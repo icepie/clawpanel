@@ -249,6 +249,7 @@ fn configure_git_https_rules() -> usize {
     for target in &targets {
         let key = format!("url.{target}.insteadOf");
         let mut unset = Command::new("git");
+        unset.env("PATH", crate::commands::enhanced_path());
         unset.args(["config", "--global", "--unset-all", &key]);
         #[cfg(target_os = "windows")]
         unset.creation_flags(0x08000000);
@@ -259,6 +260,7 @@ fn configure_git_https_rules() -> usize {
     for (target, from) in GIT_HTTPS_REWRITES {
         let key = format!("url.{target}.insteadOf");
         let mut cmd = Command::new("git");
+        cmd.env("PATH", crate::commands::enhanced_path());
         cmd.args(["config", "--global", "--add", &key, from]);
         #[cfg(target_os = "windows")]
         cmd.creation_flags(0x08000000);
@@ -271,12 +273,15 @@ fn configure_git_https_rules() -> usize {
 
 fn apply_git_install_env(cmd: &mut Command) {
     crate::commands::apply_proxy_env(cmd);
+    // GIT_TERMINAL_PROMPT=0: 禁止 git 弹出凭据提示（非交互环境下挂起进程）
+    // GIT_ALLOW_PROTOCOL: 保留 ssh/git 协议作为回退；insteadOf 规则会把它们重写为 https，
+    //   但旧版 git (<2.31) 不支持 GIT_CONFIG_KEY_N env var，仍需允许原协议通过后靠 global config 重写
     cmd.env("GIT_TERMINAL_PROMPT", "0")
         .env(
             "GIT_SSH_COMMAND",
-            "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o IdentitiesOnly=yes",
+            "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=10",
         )
-        .env("GIT_ALLOW_PROTOCOL", "https:http:file");
+        .env("GIT_ALLOW_PROTOCOL", "https:http:file:git:ssh");
     cmd.env("GIT_CONFIG_COUNT", GIT_HTTPS_REWRITES.len().to_string());
     for (idx, (target, from)) in GIT_HTTPS_REWRITES.iter().enumerate() {
         cmd.env(
@@ -1852,6 +1857,7 @@ async fn upgrade_openclaw_inner(
         "-g",
         &pkg,
         "--force",
+        "--no-optional",
         "--registry",
         registry,
         "--verbose",
@@ -1916,6 +1922,7 @@ async fn upgrade_openclaw_inner(
                 "-g",
                 &pkg,
                 "--force",
+                "--no-optional",
                 "--registry",
                 fallback,
                 "--verbose",
