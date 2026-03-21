@@ -56,6 +56,18 @@ pub fn run() {
             }
         })
         .setup(|app| {
+            // 清理 openclaw 遗留的 staging 临时目录，防止误加载
+            let extensions_dir = commands::openclaw_dir().join("extensions");
+            if let Ok(entries) = std::fs::read_dir(&extensions_dir) {
+                for entry in entries.flatten() {
+                    let name = entry.file_name();
+                    if name.to_string_lossy().starts_with(".openclaw-install-stage-")
+                        && entry.path().is_dir()
+                    {
+                        let _ = std::fs::remove_dir_all(entry.path());
+                    }
+                }
+            }
             // 同步修复缺失的 changelog.js，必须在 CLI 启动前完成
             commands::config::patch_pi_coding_agent_silent();
             service::start_backend_guardian(app.handle().clone());

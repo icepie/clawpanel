@@ -1155,6 +1155,18 @@ pub async fn install_channel_plugin(
         }
     }
 
+    // 清理 openclaw 遗留的 staging 临时目录，防止下次启动误加载
+    let extensions_dir = super::openclaw_dir().join("extensions");
+    if let Ok(entries) = fs::read_dir(&extensions_dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            let name_str = name.to_string_lossy();
+            if name_str.starts_with(".openclaw-install-stage-") && entry.path().is_dir() {
+                let _ = fs::remove_dir_all(entry.path());
+            }
+        }
+    }
+
     if let Err(err) = finalize {
         let rollback_err =
             cleanup_failed_plugin_install(plugin_id, had_existing_plugin, had_existing_config)
