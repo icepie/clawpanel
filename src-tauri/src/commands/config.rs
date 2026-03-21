@@ -306,7 +306,7 @@ fn write_npm_gitconfig() -> Option<std::path::PathBuf> {
     Some(path)
 }
 
-fn apply_git_install_env(cmd: &mut Command) {
+pub fn apply_git_install_env(cmd: &mut Command) {
     crate::commands::apply_proxy_env(cmd);
     cmd.env("GIT_TERMINAL_PROMPT", "0")
         .env(

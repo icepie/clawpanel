@@ -1053,8 +1053,10 @@ pub async fn install_channel_plugin(
         fs::copy(&config_path, &config_backup).map_err(|e| format!("备份配置失败: {e}"))?;
     }
 
-    let spawn_result = crate::utils::openclaw_command()
-        .args(["plugins", "install", package_name])
+    let mut plugin_cmd = crate::utils::openclaw_command();
+    plugin_cmd.args(["plugins", "install", package_name]);
+    crate::commands::config::apply_git_install_env(&mut plugin_cmd);
+    let spawn_result = plugin_cmd
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn();
@@ -1184,8 +1186,10 @@ pub async fn install_qqbot_plugin(app: tauri::AppHandle) -> Result<String, Strin
         fs::copy(&config_path, &config_backup).map_err(|e| format!("备份配置失败: {e}"))?;
     }
 
-    let spawn_result = crate::utils::openclaw_command()
-        .args(["plugins", "install", "@sliverp/qqbot@latest"])
+    let mut qqbot_cmd = crate::utils::openclaw_command();
+    qqbot_cmd.args(["plugins", "install", "@sliverp/qqbot@latest"]);
+    crate::commands::config::apply_git_install_env(&mut qqbot_cmd);
+    let spawn_result = qqbot_cmd
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn();
