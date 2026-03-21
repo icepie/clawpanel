@@ -2253,6 +2253,7 @@ pub fn check_installation() -> Result<Value, String> {
 /// 检测 Node.js 是否已安装，返回版本号
 #[tauri::command]
 pub fn check_node() -> Result<Value, String> {
+    super::refresh_enhanced_path();
     let mut result = serde_json::Map::new();
     let mut cmd = Command::new("node");
     cmd.arg("--version");
@@ -3235,9 +3236,11 @@ pub fn set_npm_registry(registry: String) -> Result<(), String> {
 /// 检测 Git 是否已安装
 #[tauri::command]
 pub fn check_git() -> Result<Value, String> {
+    super::refresh_enhanced_path();
     let mut result = serde_json::Map::new();
     let mut cmd = Command::new("git");
     cmd.arg("--version");
+    cmd.env("PATH", super::enhanced_path());
     #[cfg(target_os = "windows")]
     cmd.creation_flags(0x08000000);
     match cmd.output() {
