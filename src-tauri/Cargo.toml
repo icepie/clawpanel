@@ -32,3 +32,6 @@ base64 = "0.22"
 urlencoding = "2"
 regex = "1"
 tokio = { version = "1", features = ["process", "time"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winreg = "0.52"

@@ -316,6 +316,9 @@ fn build_enhanced_path() -> String {
         let localappdata = std::env::var("LOCALAPPDATA").unwrap_or_default();
         let appdata = std::env::var("APPDATA").unwrap_or_default();
 
+        // 从注册表读取最新 PATH（绕过进程启动时的环境变量快照）
+        let current = read_windows_path_from_registry().unwrap_or(current);
+
         let mut extra: Vec<String> = vec![format!(r"{}\nodejs", pf), format!(r"{}\nodejs", pf86)];
         if !localappdata.is_empty() {
             extra.push(format!(r"{}\Programs\nodejs", localappdata));
@@ -400,4 +403,39 @@ fn build_enhanced_path() -> String {
         }
         parts.join(";")
     }
+}
+
+/// 从 Windows 注册表读取最新的 PATH 环境变量
+/// 合并系统 PATH（HKLM）和用户 PATH（HKCU），绕过进程启动时的快照
+#[cfg(target_os = "windows")]
+fn read_windows_path_from_registry() -> Option<String> {
+    use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ};
+    use winreg::RegKey;
+
+    let sys_key = RegKey::predef(HKEY_LOCAL_MACHINE)
+        .open_subkey_with_flags(
+            r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
+            KEY_READ,
+        )
+        .ok();
+    let user_key = RegKey::predef(HKEY_CURRENT_USER)
+        .open_subkey_with_flags(r"Environment", KEY_READ)
+        .ok();
+
+    let sys_path: String = sys_key
+        .as_ref()
+        .and_then(|k| k.get_value("Path").ok())
+        .unwrap_or_default();
+    let user_path: String = user_key
+        .as_ref()
+        .and_then(|k| k.get_value("Path").ok())
+        .unwrap_or_default();
+
+    let combined = match (sys_path.is_empty(), user_path.is_empty()) {
+        (true, true) => return None,
+        (true, false) => user_path,
+        (false, true) => sys_path,
+        (false, false) => format!("{};{}", sys_path, user_path),
+    };
+    Some(combined)
 }
