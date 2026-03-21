@@ -271,17 +271,56 @@ fn configure_git_https_rules() -> usize {
     success
 }
 
+/// 写入 npm 安装专用临时 gitconfig，包含所有 URL 重写规则。
+/// 使用 GIT_CONFIG_GLOBAL 指向此文件，适用于所有 git 版本（无需 ≥2.31）。
+/// 文件写入系统临时目录，以进程 ID 区分，重启后自动清理。
+fn write_npm_gitconfig() -> Option<std::path::PathBuf> {
+    // 先 include 用户已有配置，保留用户凭据/签名等设置
+    let home = dirs::home_dir().unwrap_or_default();
+    let user_gitconfig = home.join(".gitconfig");
+    let mut content = String::new();
+    if user_gitconfig.exists() {
+        content.push_str(&format!(
+            "[include]\n\tpath = {}\n",
+            user_gitconfig.display()
+        ));
+    }
+    content.push_str("[core]\n\taskPass =\n[protocol]\n\tallow = always\n");
+
+    // 按 target URL 分组生成 [url "..."] 节
+    let mut by_target: std::collections::BTreeMap<&str, Vec<&str>> =
+        std::collections::BTreeMap::new();
+    for (target, from) in GIT_HTTPS_REWRITES {
+        by_target.entry(target).or_default().push(from);
+    }
+    for (target, froms) in &by_target {
+        content.push_str(&format!("[url \"{}\"]\n", target));
+        for from in froms {
+            content.push_str(&format!("\tinsteadOf = {}\n", from));
+        }
+    }
+
+    let path = std::env::temp_dir()
+        .join(format!("clawpanel-gitconfig-{}.ini", std::process::id()));
+    std::fs::write(&path, content).ok()?;
+    Some(path)
+}
+
 fn apply_git_install_env(cmd: &mut Command) {
     crate::commands::apply_proxy_env(cmd);
-    // GIT_TERMINAL_PROMPT=0: 禁止 git 弹出凭据提示（非交互环境下挂起进程）
-    // GIT_ALLOW_PROTOCOL: 保留 ssh/git 协议作为回退；insteadOf 规则会把它们重写为 https，
-    //   但旧版 git (<2.31) 不支持 GIT_CONFIG_KEY_N env var，仍需允许原协议通过后靠 global config 重写
     cmd.env("GIT_TERMINAL_PROMPT", "0")
         .env(
             "GIT_SSH_COMMAND",
             "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=10",
         )
         .env("GIT_ALLOW_PROTOCOL", "https:http:file:git:ssh");
+
+    // 写入临时 gitconfig 并通过 GIT_CONFIG_GLOBAL 注入（所有 git 版本均有效）
+    if let Some(cfg_path) = write_npm_gitconfig() {
+        cmd.env("GIT_CONFIG_GLOBAL", cfg_path.to_string_lossy().as_ref());
+    }
+
+    // 同时保留 GIT_CONFIG_KEY_N 方式兜底（git ≥2.31）
     cmd.env("GIT_CONFIG_COUNT", GIT_HTTPS_REWRITES.len().to_string());
     for (idx, (target, from)) in GIT_HTTPS_REWRITES.iter().enumerate() {
         cmd.env(
@@ -290,6 +329,13 @@ fn apply_git_install_env(cmd: &mut Command) {
         )
         .env(format!("GIT_CONFIG_VALUE_{idx}"), *from);
     }
+
+    // npm 网络重试配置（对 registry fetch 和 git clone 均有效）
+    cmd.env("NPM_CONFIG_FETCH_RETRIES", "5")
+        .env("NPM_CONFIG_FETCH_RETRY_FACTOR", "2")
+        .env("NPM_CONFIG_FETCH_RETRY_MINTIMEOUT", "5000")
+        .env("NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT", "60000")
+        .env("NPM_CONFIG_FETCH_TIMEOUT", "120000");
 }
 
 /// Linux: 检测是否以 root 身份运行（避免 unsafe libc 调用）
