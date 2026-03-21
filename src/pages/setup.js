@@ -51,13 +51,14 @@ async function runDetect(page) {
   invalidate('get_version_info', 'check_node', 'check_git', 'get_services_status', 'check_installation')
   // 同步刷新 Rust 侧 PATH 缓存和 CLI 检测缓存（安装新工具后无需重启）
   api.invalidatePathCache().catch(() => {})
-  // 并行检测 Node.js、Git、OpenClaw CLI、配置文件
-  const [nodeRes, gitRes, clawRes, configRes, versionRes] = await Promise.allSettled([
+  // 并行检测 Node.js、Git、OpenClaw CLI、配置文件，同时扫描所有 Node.js 版本
+  const [nodeRes, gitRes, clawRes, configRes, versionRes, scanRes] = await Promise.allSettled([
     api.checkNode(),
     api.checkGit(),
     api.getServicesStatus(),
     api.checkInstallation(),
     api.getVersionInfo(),
+    api.scanNodePaths(),
   ])
 
   const node = nodeRes.status === 'fulfilled' ? nodeRes.value : { installed: false }
@@ -67,6 +68,7 @@ async function runDetect(page) {
     && clawRes.value[0]?.cli_installed !== false
   let config = configRes.status === 'fulfilled' ? configRes.value : { installed: false }
   const version = versionRes.status === 'fulfilled' ? versionRes.value : null
+  const nodeVersions = scanRes.status === 'fulfilled' ? scanRes.value : []
 
   // CLI 已装但配置缺失 → 自动创建默认配置
   if (cliOk && !config.installed) {
@@ -85,7 +87,7 @@ async function runDetect(page) {
     api.configureGitHttps().catch(() => {})
   }
 
-  renderSteps(page, { node, git, cliOk, config, version })
+  renderSteps(page, { node, git, cliOk, config, version, nodeVersions })
 }
 
 function stepIcon(ok) {
@@ -93,7 +95,7 @@ function stepIcon(ok) {
   return `<span style="color:${color};font-weight:700;width:18px;display:inline-block">${ok ? '✓' : '✗'}</span>`
 }
 
-function renderSteps(page, { node, git, cliOk, config, version }) {
+function renderSteps(page, { node, git, cliOk, config, version, nodeVersions = [] }) {
   const stepsEl = page.querySelector('#setup-steps')
   const nodeOk = node.installed
   const gitOk = git?.installed || false
@@ -111,7 +113,25 @@ function renderSteps(page, { node, git, cliOk, config, version }) {
         ? `<p style="color:var(--success);font-size:var(--font-size-sm);margin-bottom:4px">已安装 ${node.version || ''}
             <button class="btn btn-secondary btn-sm" id="btn-scan-node" style="font-size:10px;padding:2px 8px;margin-left:8px">${icon('search', 12)} 切换版本</button>
           </p>
-          <div id="scan-result" style="margin-top:4px;display:none"></div>`
+          ${nodeVersions.length > 1
+            ? `<div id="scan-result" style="margin-top:4px;display:block">
+                <div style="font-size:var(--font-size-xs);color:var(--text-tertiary);margin-bottom:4px">检测到 ${nodeVersions.length} 个 Node.js 版本，当前使用 ${node.version}：</div>
+                ${nodeVersions.map(r =>
+                  `<div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+                    <span style="${r.version === node.version ? 'color:var(--success)' : 'color:var(--text-tertiary)'}">
+                      ${r.version === node.version ? '●' : '○'}
+                    </span>
+                    <code style="flex:1;background:var(--bg-secondary);padding:2px 6px;border-radius:3px;font-size:11px">${r.path}</code>
+                    <span style="font-size:11px;color:var(--text-tertiary)">${r.version}</span>
+                    ${r.version === node.version
+                      ? `<span style="font-size:10px;color:var(--success);padding:2px 8px">当前</span>`
+                      : `<button class="btn btn-primary btn-sm btn-use-path" data-path="${r.path}" style="font-size:10px;padding:2px 8px">使用</button>`
+                    }
+                  </div>`
+                ).join('')}
+              </div>`
+            : `<div id="scan-result" style="margin-top:4px;display:none"></div>`
+          }`
         : `<p style="color:var(--text-secondary);font-size:var(--font-size-sm);margin-bottom:var(--space-sm)">
             OpenClaw 基于 Node.js 运行，请先安装。
           </p>
@@ -528,6 +548,15 @@ function bindEvents(page, nodeOk, detectState) {
       btn.disabled = false
       btn.textContent = '一键初始化配置'
     }
+  })
+
+  // 绑定初始渲染的多版本选择按钮（多版本时自动展示）
+  page.querySelectorAll('#scan-result .btn-use-path').forEach(b => {
+    b.addEventListener('click', async () => {
+      await api.saveCustomNodePath(b.dataset.path)
+      toast('Node.js 路径已保存，正在重新检测...', 'success')
+      setTimeout(() => runDetect(page), 300)
+    })
   })
 
   // 自动扫描 Node.js
