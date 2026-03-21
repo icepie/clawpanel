@@ -494,6 +494,32 @@ fn npm_command() -> Command {
     }
 }
 
+/// 在指定目录运行 npm install（不带 -g），用于补全插件本地依赖
+pub fn npm_command_for_dir(dir: &std::path::Path) -> Command {
+    let registry = get_configured_registry();
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        let mut cmd = Command::new("cmd");
+        cmd.args(["/c", "npm", "install", "--registry", &registry]);
+        cmd.current_dir(dir);
+        cmd.env("PATH", super::enhanced_path());
+        crate::commands::apply_proxy_env(&mut cmd);
+        cmd.creation_flags(CREATE_NO_WINDOW);
+        cmd
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let mut cmd = Command::new("npm");
+        cmd.args(["install", "--registry", &registry]);
+        cmd.current_dir(dir);
+        cmd.env("PATH", super::enhanced_path());
+        crate::commands::apply_proxy_env(&mut cmd);
+        cmd
+    }
+}
+
 /// 安装/升级前的清理工作：停止 Gateway、清理 npm 全局 bin 下的 openclaw 残留文件
 /// 解决 Windows 上 EEXIST（文件已存在）和文件被占用的问题
 fn pre_install_cleanup() {

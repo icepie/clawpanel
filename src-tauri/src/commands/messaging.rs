@@ -1074,6 +1074,13 @@ pub async fn install_channel_plugin(
     let handle = std::thread::spawn(move || {
         if let Some(pipe) = stderr {
             for line in BufReader::new(pipe).lines().map_while(Result::ok) {
+                // 过滤安装过程中 openclaw 扫描 staging 目录产生的预期噪音
+                if line.contains("plugins.allow is empty")
+                    || line.contains("failed to load from")
+                    || line.contains(".openclaw-install-stage-")
+                {
+                    continue;
+                }
                 let _ = app2.emit("plugin-log", &line);
             }
         }
@@ -1083,7 +1090,16 @@ pub async fn install_channel_plugin(
     let mut progress = 30;
     if let Some(pipe) = child.stdout.take() {
         for line in BufReader::new(pipe).lines().map_while(Result::ok) {
-            let _ = app.emit("plugin-log", &line);
+            // 检测到依赖安装步骤时给出友好提示
+            if line.contains("Installing plugin dependencies") {
+                let _ = app.emit("plugin-log", &line);
+                let _ = app.emit(
+                    "plugin-log",
+                    "（正在安装依赖，可能需要 1-3 分钟，请耐心等待…）",
+                );
+            } else {
+                let _ = app.emit("plugin-log", &line);
+            }
             if progress < 90 {
                 progress += 10;
                 let _ = app.emit("plugin-progress", progress);
@@ -1122,6 +1138,22 @@ pub async fn install_channel_plugin(
         super::config::save_openclaw_json(&cfg)?;
         Ok(())
     })();
+
+    // 补跑 npm install：openclaw 内部 npm 有时静默失败，在此兜底
+    let node_modules = plugin_dir.join("node_modules");
+    if plugin_dir.join("package.json").exists() && !node_modules.exists() {
+        let _ = app.emit("plugin-log", "正在补全插件依赖（npm install）...");
+        let mut npm_cmd = super::config::npm_command_for_dir(&plugin_dir);
+        crate::commands::config::apply_git_install_env(&mut npm_cmd);
+        if let Ok(out) = npm_cmd.output() {
+            if out.status.success() {
+                let _ = app.emit("plugin-log", "✅ 插件依赖安装完成");
+            } else {
+                let stderr = String::from_utf8_lossy(&out.stderr);
+                let _ = app.emit("plugin-log", format!("⚠️ 补全依赖失败: {}", stderr.lines().last().unwrap_or("")));
+            }
+        }
+    }
 
     if let Err(err) = finalize {
         let rollback_err =
