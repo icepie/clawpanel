@@ -21,10 +21,6 @@ export async function render() {
       <div class="stat-card loading-placeholder"></div>
       <div class="stat-card loading-placeholder"></div>
     </div>
-    <div class="config-section" style="color:var(--text-tertiary);font-size:var(--font-size-xs)">
-      <p>NiceClaw 基于 Tauri v2 构建，前端 Vanilla JS + Vite，后端 Rust。</p>
-      <p style="margin-top:8px">MIT License &copy; 2026</p>
-    </div>
   `
 
   loadData(page)

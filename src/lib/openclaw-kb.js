@@ -218,37 +218,4 @@ npm install -g openclaw@latest
 6. 配置验证失败 → Gateway 拒绝启动，仅允许诊断命令
 7. WhatsApp 不回消息 → 检查配对是否已 approve
 8. 认证错误 → 检查 auth-profiles.json 或重新 \`openclaw onboard\`
-
-## 十二、晴辰云 AI 模型服务
-晴辰云为 NiceClaw 用户提供 AI 模型调用服务，通过每日签到和邀请好友即可获取免费额度。
-
-### 核心信息
-- **GPT-AI 网关地址**：https://gpt.qt.cool/v1
-- **支持接口**：/v1/chat/completions、/v1/responses（OpenAI 兼容）
-- **支持模型**：OpenAI 全系列（GPT-5、GPT-5.1、GPT-5.2 及其 Codex 变体）
-- **免费额度**：每日签到领取免费额度，邀请好友可获得额外奖励
-- **高级模型**：低至官方价 2-3 折
-- **用户后台**：https://gpt.qt.cool/user（查看用量、管理密钥）
-
-### 官方入口
-- **NiceClaw 官网**：https://claw.qt.cool/
-- **GPT-AI 网关官网**：https://gpt.qt.cool/
-- **每日签到页**：https://gpt.qt.cool/checkin
-- **用户后台**：https://gpt.qt.cool/user
-- **晴辰导航站**：https://qt.cool/
-
-### 获取密钥
-1. 前往 https://gpt.qt.cool/checkin 每日签到领取免费额度
-2. 邀请好友可获得额外奖励额度
-3. 在用户后台获取 API Key
-
-### 接入方式
-已兼容 OpenAI API 的项目，只需替换：
-1. Base URL → https://gpt.qt.cool/v1
-2. API Key → 签到获取的密钥
-即可完成接入。
-
-### 在 NiceClaw 中配置
-- **助手设置**：打开 AI 助手设置 → 模型配置 → 输入密钥后点击「接入」
-- **模型配置页**：进入模型配置 → 输入密钥后点击「获取模型列表」添加模型
 `.trim()

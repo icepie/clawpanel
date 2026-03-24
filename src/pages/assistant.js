@@ -9,7 +9,7 @@ import { showConfirm } from '../components/modal.js'
 import { api } from '../lib/tauri-api.js'
 import { OPENCLAW_KB } from '../lib/openclaw-kb.js'
 import { icon, statusIcon } from '../lib/icons.js'
-import { QTCOOL, PROVIDER_PRESETS, API_TYPES as SHARED_API_TYPES, fetchQtcoolModels } from '../lib/model-presets.js'
+import { PROVIDER_PRESETS, API_TYPES as SHARED_API_TYPES } from '../lib/model-presets.js'
 
 // ── 常量 ──
 const STORAGE_KEY = 'clawpanel-assistant'
@@ -86,7 +86,7 @@ function apiKeyPlaceholder(apiType) {
 }
 
 // ── 系统提示词 ──
-const DEFAULT_NAME = '晴辰助手'
+const DEFAULT_NAME = 'AI 助手'
 const DEFAULT_PERSONALITY = '专业、友善、简洁。善于分析问题，给出可操作的解决方案。'
 
 function getSystemPromptBase() {
@@ -2490,45 +2490,6 @@ function showSettings() {
             </div>
           </div>
           <div class="form-hint" id="ast-api-hint" style="margin-top:-4px">${apiHintText(c.apiType)}</div>
-
-          <div id="ast-qtcool-promo" style="margin-top:14px;border-radius:var(--radius-lg);border:1px solid var(--border-primary);border-left:3px solid var(--primary);background:var(--bg-secondary);overflow:hidden">
-            <div style="padding:14px 16px 12px">
-              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px">
-                <div>
-                  <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
-                    <span style="font-weight:700;font-size:var(--font-size-sm)">${icon('zap', 14)} 晴辰云</span>
-                    <span style="font-size:10px;background:var(--primary);color:#fff;padding:1px 7px;border-radius:8px">推荐</span>
-                  </div>
-                  <div style="font-size:11px;color:var(--text-tertiary);line-height:1.4">
-                    GPT-5 / Codex 全系列，低至官方价 2-3 折，不满意随时可退
-                  </div>
-                </div>
-                <a href="${QTCOOL.checkinUrl}" target="_blank" class="btn btn-primary btn-xs" style="flex-shrink:0">${icon('gift', 11)} 签到领额度</a>
-              </div>
-              <div style="font-size:var(--font-size-xs);color:var(--text-secondary);margin-bottom:8px">
-                填入 API Key 后选择模型即可接入。没有密钥？<a href="${QTCOOL.checkinUrl}" target="_blank" style="color:var(--primary)">每日签到</a> 领取，在 <a href="${QTCOOL.usageUrl}" target="_blank" style="color:var(--primary)">用户后台</a> 复制
-              </div>
-              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-                <input class="form-input" id="ast-qtcool-key" placeholder="粘贴 API Key" style="font-size:12px;padding:5px 10px;flex:1;min-width:120px">
-                <input type="checkbox" id="ast-qtcool-customkey" style="display:none">
-              </div>
-              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                <select id="ast-qtcool-model" class="form-input" style="font-size:12px;padding:5px 10px;min-width:130px;flex:1">
-                  <option value="" disabled selected>加载模型列表...</option>
-                </select>
-                <button class="btn btn-sm btn-secondary" id="ast-qtcool-test">${icon('search', 12)} 测试</button>
-                <button class="btn btn-sm btn-primary" id="ast-qtcool-apply">${icon('zap', 12)} 接入</button>
-              </div>
-              <div id="ast-qtcool-status" style="margin-top:8px;font-size:11px;min-height:16px;line-height:1.5"></div>
-            </div>
-            <div style="border-top:1px solid var(--border-primary);padding:6px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;background:var(--bg-tertiary)">
-              <div style="display:flex;gap:8px;align-items:center">
-                <button class="btn btn-xs btn-secondary" id="ast-qtcool-sync-to" title="将助手配置同步到 OpenClaw 全局">${icon('upload', 11)} 同步到 OpenClaw</button>
-                <button class="btn btn-xs btn-secondary" id="ast-qtcool-sync-from" title="从 OpenClaw 全局配置读取">${icon('download', 11)} 从 OpenClaw 读取</button>
-              </div>
-              <a href="${QTCOOL.site}" target="_blank" style="color:var(--primary);text-decoration:none;font-size:11px">${icon('external-link', 11)} 了解更多</a>
-            </div>
-          </div>
         </div>
         <div class="ast-tab-panel" data-panel="tools">
           <div class="form-hint" style="margin-bottom:10px">工具开关优先级高于模式设置。关闭的工具在任何模式下都不可用。</div>
@@ -2864,195 +2825,6 @@ function showSettings() {
     const row = e.target.closest('[data-kb-idx]')
     if (row) {
       openKBEditor(parseInt(row.dataset.kbIdx))
-    }
-  })
-
-  // ── gpt.qt.cool 一键配置 ──
-  const qtcoolModelSelect = overlay.querySelector('#ast-qtcool-model')
-  const qtcoolCustomKeyCheckbox = overlay.querySelector('#ast-qtcool-customkey')
-  const qtcoolKeyInput = overlay.querySelector('#ast-qtcool-key')
-
-  // 动态获取模型列表（共享逻辑）
-  ;(async () => {
-    const models = await fetchQtcoolModels()
-    qtcoolModelSelect.innerHTML = models.map((m, i) =>
-      `<option value="${m.id}" style="color:#333"${i === 0 ? ' selected' : ''}>${m.name || m.id}${i === 0 ? ' ★' : ''}</option>`
-    ).join('')
-  })()
-
-  // key input is always visible now (no more built-in key)
-  const qtcoolStatus = overlay.querySelector('#ast-qtcool-status')
-
-  // 测试按钮：快速验证接口可用性
-  overlay.querySelector('#ast-qtcool-test').onclick = async (e) => {
-    const btn = e.target
-    const selectedModel = qtcoolModelSelect.value
-    if (!selectedModel) { qtcoolStatus.innerHTML = `<span style="color:#fbbf24">${statusIcon('warn', 14)} 请先选择模型</span>`; return }
-    const key = qtcoolKeyInput.value.trim()
-    if (!key) { qtcoolStatus.innerHTML = `<span style="color:#fbbf24">${statusIcon('warn', 14)} 请先输入 API Key（<a href="${QTCOOL.checkinUrl}" target="_blank" style="color:var(--primary)">签到领取</a>）</span>`; return }
-
-    btn.disabled = true
-    btn.textContent = '测试中...'
-    qtcoolStatus.innerHTML = '<span style="color:rgba(255,255,255,0.5)">正在连接 GPT-AI 网关...</span>'
-    const t0 = Date.now()
-    try {
-      const resp = await fetch(QTCOOL.baseUrl + '/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-        body: JSON.stringify({ model: selectedModel, messages: [{ role: 'user', content: 'Hi' }], max_tokens: 10 }),
-        signal: AbortSignal.timeout(15000)
-      })
-      const ms = Date.now() - t0
-      if (resp.ok) {
-        const data = await resp.json()
-        const reply = data.choices?.[0]?.message?.content || ''
-        qtcoolStatus.innerHTML = `<span style="color:#34d399">${statusIcon('ok', 14)} 测试通过（${(ms/1000).toFixed(1)}s）</span><span style="color:rgba(255,255,255,0.4);margin-left:6px">${selectedModel} 响应正常</span>`
-      } else {
-        const errText = await resp.text().catch(() => '')
-        let errMsg = `HTTP ${resp.status}`
-        try {
-          const errJson = JSON.parse(errText)
-          if (errJson.error?.message) errMsg = errJson.error.message
-        } catch { if (errText) errMsg += ' — ' + errText.slice(0, 200) }
-        // 将 URL 转为可点击链接
-        const errHtml = errMsg.replace(/(https?:\/\/[^\s,，。）)]+)/g, '<a href="$1" target="_blank" style="color:var(--primary)">$1</a>')
-        qtcoolStatus.innerHTML = `<div style="color:#f87171;line-height:1.5">${statusIcon('err', 14)} <strong>测试失败</strong></div><div style="color:var(--text-secondary);font-size:11px;line-height:1.5;margin-top:4px;word-break:break-all">${errHtml}</div>`
-      }
-    } catch (err) {
-      qtcoolStatus.innerHTML = `<div style="color:#f87171">${statusIcon('err', 14)} 连接失败：${err.message}</div>`
-    }
-    btn.disabled = false
-    btn.innerHTML = `${icon('search', 12)} 测试`
-  }
-
-  // 一键接入：填充配置 + 提示设为 OpenClaw 主模型
-  overlay.querySelector('#ast-qtcool-apply').onclick = async () => {
-    const selectedModel = qtcoolModelSelect.value
-    if (!selectedModel) { qtcoolStatus.innerHTML = `<span style="color:#fbbf24">${statusIcon('warn', 14)} 请先选择模型</span>`; return }
-    const key = qtcoolKeyInput.value.trim()
-    if (!key) { qtcoolStatus.innerHTML = `<span style="color:#fbbf24">${statusIcon('warn', 14)} 请先输入 API Key（<a href="${QTCOOL.checkinUrl}" target="_blank" style="color:var(--primary)">签到领取</a>）</span>`; return }
-
-    // 1) 填充助手配置
-    overlay.querySelector('#ast-baseurl').value = QTCOOL.baseUrl
-    overlay.querySelector('#ast-apikey').value = key
-    overlay.querySelector('#ast-model').value = selectedModel
-    overlay.querySelector('#ast-apitype').value = 'openai-completions'
-    qtcoolStatus.innerHTML = `<span style="color:#34d399">${statusIcon('ok', 14)} 助手已配置为 ${selectedModel}</span>`
-    toast('助手已配置为 ' + selectedModel, 'success')
-
-    // 2) 提示是否同步写入 OpenClaw 配置（设为主模型）
-    const yes = await showConfirm(
-      '同步到 OpenClaw？',
-      `是否将 qtcool/${selectedModel} 设为 OpenClaw 主模型？\n\n这将添加晴辰云为模型服务商，并设置 ${selectedModel} 为全局主模型。`,
-      { confirmText: '设为主模型', cancelText: '仅配置助手' }
-    )
-    if (yes) {
-      try {
-        let config = {}
-        try { config = await api.readOpenclawConfig() } catch {}
-        if (!config.models) config.models = {}
-        if (!config.models.providers) config.models.providers = {}
-
-        // 添加/更新 qtcool provider
-        if (!config.models.providers.qtcool) {
-          config.models.providers.qtcool = {
-            baseUrl: QTCOOL.baseUrl,
-            apiKey: key,
-            api: 'openai-completions',
-            models: [{ id: selectedModel, name: selectedModel, contextWindow: 128000, reasoning: selectedModel.includes('codex') }]
-          }
-        } else {
-          config.models.providers.qtcool.apiKey = key
-        }
-
-        // 设为主模型
-        if (!config.agents) config.agents = {}
-        if (!config.agents.defaults) config.agents.defaults = {}
-        if (!config.agents.defaults.model) config.agents.defaults.model = {}
-        config.agents.defaults.model.primary = 'qtcool/' + selectedModel
-
-        await api.writeOpenclawConfig(config)
-        qtcoolStatus.innerHTML = `<span style="color:#34d399">${statusIcon('ok', 14)} 已设为主模型 qtcool/${selectedModel}，正在重启 Gateway...</span>`
-        try {
-          await api.restartGateway()
-          toast('OpenClaw 主模型已切换为 qtcool/' + selectedModel, 'success')
-          qtcoolStatus.innerHTML = `<span style="color:#34d399">${statusIcon('ok', 14)} 全部完成！主模型：qtcool/${selectedModel}</span>`
-        } catch (e) {
-          toast('配置已保存，Gateway 重启失败: ' + e.message, 'warning')
-        }
-      } catch (e) {
-        toast('写入 OpenClaw 配置失败: ' + e, 'error')
-      }
-    }
-  }
-
-  // 同步到 OpenClaw：将助手的 baseUrl/apiKey/model 写入 openclaw.json
-  overlay.querySelector('#ast-qtcool-sync-to')?.addEventListener('click', async () => {
-    const baseUrl = overlay.querySelector('#ast-baseurl').value.trim()
-    const apiKey = overlay.querySelector('#ast-apikey').value.trim()
-    const model = overlay.querySelector('#ast-model').value.trim()
-    if (!baseUrl || !apiKey || !model) {
-      toast('请先在上方配置好 Base URL、API Key 和模型', 'warning')
-      return
-    }
-    const yes = await showConfirm(
-      '同步到 OpenClaw',
-      `将当前助手的模型配置写入 OpenClaw 全局：\n\n• 服务商：晴辰云（qtcool）\n• 模型：${model}\n• 设为全局主模型\n\n此操作会覆盖已有的晴辰云服务商配置并重启 Gateway。`,
-      { confirmText: '确认同步', cancelText: '取消' }
-    )
-    if (!yes) return
-    try {
-      let config = {}
-      try { config = await api.readOpenclawConfig() } catch {}
-      if (!config.models) config.models = {}
-      if (!config.models.providers) config.models.providers = {}
-      config.models.providers.qtcool = {
-        baseUrl,
-        apiKey,
-        api: 'openai-completions',
-        models: [{ id: model, name: model, contextWindow: 128000, reasoning: model.includes('codex') }]
-      }
-      if (!config.agents) config.agents = {}
-      if (!config.agents.defaults) config.agents.defaults = {}
-      if (!config.agents.defaults.model) config.agents.defaults.model = {}
-      config.agents.defaults.model.primary = 'qtcool/' + model
-      await api.writeOpenclawConfig(config)
-      toast('已同步到 OpenClaw 全局配置，主模型: qtcool/' + model, 'success')
-      try { await api.restartGateway() } catch {}
-    } catch (e) {
-      toast('同步失败: ' + e, 'error')
-    }
-  })
-
-  // 从 OpenClaw 读取：将 openclaw.json 的 qtcool provider 配置填入助手
-  overlay.querySelector('#ast-qtcool-sync-from')?.addEventListener('click', async () => {
-    try {
-      const config = await api.readOpenclawConfig()
-      const qtProvider = config?.models?.providers?.qtcool
-      if (!qtProvider?.baseUrl) {
-        toast('OpenClaw 中尚未配置晴辰云服务商，请先在模型配置页添加', 'info')
-        return
-      }
-      const primary = config?.agents?.defaults?.model?.primary || ''
-      const primaryModel = primary.startsWith('qtcool/') ? primary.slice(7) : ''
-      const firstModel = (qtProvider.models || [])[0]
-      const modelId = primaryModel || (typeof firstModel === 'string' ? firstModel : firstModel?.id) || ''
-      const yes = await showConfirm(
-        '从 OpenClaw 读取',
-        `将 OpenClaw 全局配置填入助手：\n\n• Base URL：${qtProvider.baseUrl}\n• API Key：${qtProvider.apiKey ? '****' + qtProvider.apiKey.slice(-6) : '（空）'}\n${modelId ? '• 模型：' + modelId : ''}\n\n这会覆盖当前助手的模型配置。`,
-        { confirmText: '确认读取', cancelText: '取消' }
-      )
-      if (!yes) return
-      overlay.querySelector('#ast-baseurl').value = qtProvider.baseUrl
-      if (qtProvider.apiKey) {
-        overlay.querySelector('#ast-apikey').value = qtProvider.apiKey
-        qtcoolKeyInput.value = qtProvider.apiKey
-      }
-      overlay.querySelector('#ast-apitype').value = qtProvider.api || 'openai-completions'
-      if (modelId) overlay.querySelector('#ast-model').value = modelId
-      toast('已从 OpenClaw 读取配置', 'success')
-    } catch (e) {
-      toast('读取 OpenClaw 配置失败: ' + e, 'error')
     }
   })
 
