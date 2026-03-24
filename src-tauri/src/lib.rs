@@ -68,8 +68,6 @@ pub fn run() {
                     }
                 }
             }
-            // 同步修复缺失的 changelog.js，必须在 CLI 启动前完成
-            commands::config::patch_pi_coding_agent_silent();
             service::start_backend_guardian(app.handle().clone());
             tray::setup_tray(app.handle())?;
             Ok(())
