@@ -81,13 +81,28 @@ jobs:
             libgtk-3-dev \
             libayatana-appindicator3-dev
 
+      - name: 设置 dev 版本号
+        shell: bash
+        run: |
+          BASE_VER=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          DEV_VER="${BASE_VER}-dev.${SHORT_SHA}"
+          echo "DEV_VERSION=${DEV_VER}" >> "$GITHUB_ENV"
+          # 临时修改 tauri.conf.json 版本（不提交）
+          node -e "
+            const fs = require('fs');
+            const cfg = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json','utf8'));
+            cfg.version = '${DEV_VER}';
+            fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(cfg, null, 2));
+          "
+
       - name: 构建并上传到 dev prerelease
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: dev
-          releaseName: "ClawPanel dev"
+          releaseName: "NiceClaw dev"
           releaseBody: "开发版本，由最新 main 分支自动构建。"
           releaseDraft: false
           prerelease: true
