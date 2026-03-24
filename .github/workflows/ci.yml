@@ -85,14 +85,13 @@ jobs:
         shell: bash
         run: |
           BASE_VER=$(node -p "require('./src-tauri/tauri.conf.json').version")
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          DEV_VER="${BASE_VER}-dev.${SHORT_SHA}"
+          DEV_VER="${BASE_VER}-dev.${GITHUB_RUN_NUMBER}"
           echo "DEV_VERSION=${DEV_VER}" >> "$GITHUB_ENV"
           # 临时修改 tauri.conf.json 版本（不提交）
           node -e "
             const fs = require('fs');
             const cfg = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json','utf8'));
-            cfg.version = '${DEV_VER}';
+            cfg.version = process.env.DEV_VERSION;
             fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(cfg, null, 2));
           "
 
