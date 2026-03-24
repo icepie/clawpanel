@@ -67,7 +67,7 @@ async function loadAgents(page, state) {
       state.eventsAttached = true
     }
   } catch (e) {
-    container.innerHTML = '<div style="color:var(--error);padding:20px">加载失败: ' + e + '</div>'
+    container.innerHTML = '<div style="color:var(--error);padding:20px">加载失败: ' + String(e).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>'
     toast('加载 Agent 列表失败: ' + e, 'error')
   }
 }
@@ -83,7 +83,8 @@ function renderBindingBadges(agentId, bindings) {
     const label = CHANNEL_LABELS[channel] || channel
     const accountId = b.match?.accountId
     const text = accountId ? `${label} · ${accountId}` : label
-    return `<span style="font-size:var(--font-size-xs);color:var(--accent);background:var(--accent-muted);padding:1px 6px;border-radius:10px;white-space:nowrap">${text}</span>`
+    const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    return `<span style="font-size:var(--font-size-xs);color:var(--accent);background:var(--accent-muted);padding:1px 6px;border-radius:10px;white-space:nowrap">${escaped}</span>`
   }).join(' ')
 }
 
