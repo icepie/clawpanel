@@ -285,7 +285,7 @@ function showPageGuide(container) {
       <div class="chat-guide-content">
         <b>你正在使用「实时聊天」</b>
         <p>此页面通过 <b>Gateway</b> 连接 OpenClaw 的 AI Agent，对话由你部署的 OpenClaw 服务处理。</p>
-        <p style="opacity:0.7;font-size:11px">如需使用 ClawPanel 内置 AI 助手（独立于 OpenClaw），请前往左侧菜单「AI 助手」页面。</p>
+        <p style="opacity:0.7;font-size:11px">如需使用 NiceClaw 内置 AI 助手（独立于 OpenClaw），请前往左侧菜单「AI 助手」页面。</p>
       </div>
       <button class="chat-guide-close" title="知道了">&times;</button>
     </div>

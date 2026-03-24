@@ -861,7 +861,7 @@ pub fn validate_openclaw_config() -> Result<Value, String> {
         "warnings": warnings,
         "suggestions": if !ui_fields_found.is_empty() || !unknown_fields.is_empty() {
             vec![
-                "UI 专属字段会被 ClawPanel 自动清理，不影响 OpenClaw 运行".to_string(),
+                "UI 专属字段会被 NiceClaw 自动清理，不影响 OpenClaw 运行".to_string(),
                 "未知字段如果是用户手动添加的，请确保符合 OpenClaw schema".to_string(),
                 "如果遇到 'Unrecognized key' 错误，请检查配置文件是否包含 OpenClaw 不支持的字段".to_string(),
             ]
@@ -1052,7 +1052,7 @@ fn has_ui_fields(val: &Value) -> bool {
     false
 }
 
-/// 清理 ClawPanel 内部字段，避免污染 openclaw.json 导致 Gateway 启动失败
+/// 清理 NiceClaw 内部字段，避免污染 openclaw.json 导致 Gateway 启动失败
 /// Issue #89: version info 字段被写入 openclaw.json → Unknown config keys
 /// Issue #127: 增强清理逻辑，保留 OpenClaw 合法的配置字段
 ///
@@ -1066,7 +1066,7 @@ fn has_ui_fields(val: &Value) -> bool {
 /// - models.providers 中每个 model 的测试状态：lastTestAt, latency, testStatus, testError
 fn strip_ui_fields(mut val: Value) -> Value {
     if let Some(obj) = val.as_object_mut() {
-        // 清理根层级 ClawPanel 内部字段（version info 等）
+        // 清理根层级 NiceClaw 内部字段（version info 等）
         // 注意：保留 browser.* 和 agents.list，这些是 OpenClaw 合法的配置字段
         for key in &[
             "current",
@@ -2229,7 +2229,7 @@ async fn upgrade_openclaw_inner(
             let _ = app.emit(
                 "upgrade-log",
                 format!(
-                    "ClawPanel {} 默认绑定 OpenClaw 稳定版: {}",
+                    "NiceClaw {} 默认绑定 OpenClaw 稳定版: {}",
                     panel_version(),
                     recommended
                 ),
@@ -3299,7 +3299,7 @@ async fn reload_gateway_via_http() -> Result<String, String> {
         let url = format!("http://127.0.0.1:{}/__api/reload", ctrl_port);
         let client = crate::commands::build_http_client(
             std::time::Duration::from_secs(5),
-            Some("ClawPanel"),
+            Some("NiceClaw"),
         )?;
 
         let mut req = client.post(&url);
@@ -3852,11 +3852,11 @@ pub fn patch_model_vision() -> Result<bool, String> {
     Ok(changed)
 }
 
-/// 检查 ClawPanel 自身是否有新版本（GitHub → Gitee 自动降级）
+/// 检查 NiceClaw 自身是否有新版本（GitHub → Gitee 自动降级）
 #[tauri::command]
 pub async fn check_panel_update() -> Result<Value, String> {
     let client =
-        crate::commands::build_http_client(std::time::Duration::from_secs(8), Some("ClawPanel"))
+        crate::commands::build_http_client(std::time::Duration::from_secs(8), Some("NiceClaw"))
             .map_err(|e| format!("创建 HTTP 客户端失败: {e}"))?;
 
     // 先尝试 GitHub，失败后降级 Gitee
@@ -3983,7 +3983,7 @@ pub async fn test_proxy(url: Option<String>) -> Result<Value, String> {
     let target = url.unwrap_or_else(|| "https://registry.npmjs.org/-/ping".to_string());
 
     let client =
-        crate::commands::build_http_client(std::time::Duration::from_secs(10), Some("ClawPanel"))
+        crate::commands::build_http_client(std::time::Duration::from_secs(10), Some("NiceClaw"))
             .map_err(|e| format!("创建代理客户端失败: {e}"))?;
 
     let start = std::time::Instant::now();

@@ -21,7 +21,7 @@ fn audit_log(action: &str, detail: &str) {
         .and_then(|mut f| std::io::Write::write_all(&mut f, line.as_bytes()));
 }
 
-/// ClawPanel 数据目录（~/.openclaw/clawpanel/）
+/// NiceClaw 数据目录（~/.openclaw/clawpanel/）
 fn data_dir() -> PathBuf {
     super::openclaw_dir().join("clawpanel")
 }

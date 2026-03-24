@@ -10,9 +10,9 @@ export async function render() {
 
   page.innerHTML = `
     <div class="page-header" style="display:flex;align-items:center;gap:16px">
-      <img src="/images/logo-brand.png" alt="ClawPanel" style="height:48px;width:auto">
+      <img src="/images/logo-brand.png" alt="NiceClaw" style="height:48px;width:auto">
       <div>
-        <h1 class="page-title" style="margin:0">ClawPanel</h1>
+        <h1 class="page-title" style="margin:0">NiceClaw</h1>
         <p class="page-desc" style="margin:0">OpenClaw 可视化管理面板</p>
       </div>
     </div>
@@ -22,7 +22,7 @@ export async function render() {
       <div class="stat-card loading-placeholder"></div>
     </div>
     <div class="config-section" style="color:var(--text-tertiary);font-size:var(--font-size-xs)">
-      <p>ClawPanel 基于 Tauri v2 构建，前端 Vanilla JS + Vite，后端 Rust。</p>
+      <p>NiceClaw 基于 Tauri v2 构建，前端 Vanilla JS + Vite，后端 Rust。</p>
       <p style="margin-top:8px">MIT License &copy; 2026</p>
     </div>
   `
@@ -39,7 +39,7 @@ async function loadData(page) {
       api.checkInstallation(),
     ])
 
-    // 尝试从 Tauri API 获取 ClawPanel 自身版本号，失败则 fallback
+    // 尝试从 Tauri API 获取 NiceClaw 自身版本号，失败则 fallback
     let panelVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'
     try {
       const { getVersion } = await import('@tauri-apps/api/app')
@@ -59,12 +59,12 @@ async function loadData(page) {
     const aheadOfRecommended = isInstalled && hasRecommended && !!version.ahead_of_recommended
     const driftFromRecommended = isInstalled && hasRecommended && !version.is_recommended && !aheadOfRecommended
     const policyRiskHint = aheadOfRecommended
-      ? `检测到你本地安装的是高于推荐稳定版的 ${version.current}，可能存在接口、事件或配置兼容性问题。建议回退到 ${version.recommended}；如果你要继续使用高版本，请自行验证兼容性并关注 issue / release。`
-      : '当前面板默认只保证推荐稳定版的兼容性；如果你要尝试其他版本或预览版，请自行验证兼容性。若希望面板尽快支持最新版特性，欢迎提交 issue 告诉我们。'
+      ? `检测到你本地安装的是高于推荐稳定版的 ${version.current}，可能存在接口、事件或配置兼容性问题。建议回退到 ${version.recommended}；如果你要继续使用高版本，请自行验证兼容性。`
+      : '当前面板默认只保证推荐稳定版的兼容性；如果你要尝试其他版本或预览版，请自行验证兼容性。'
 
     cards.innerHTML = `
       <div class="stat-card">
-        <div class="stat-card-header"><span class="stat-card-label">ClawPanel</span></div>
+        <div class="stat-card-header"><span class="stat-card-label">NiceClaw</span></div>
         <div class="stat-card-value">${panelVersion}</div>
         <div class="stat-card-meta" id="panel-update-meta" style="display:flex;align-items:center;gap:8px">${panelUpdateHtml}</div>
       </div>

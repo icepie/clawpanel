@@ -1,15 +1,13 @@
 [package]
-name = "clawpanel"
+name = "niceclaw"
 version = "0.9.8"
 edition = "2021"
-description = "ClawPanel - OpenClaw 可视化管理面板"
-authors = ["qingchencloud"]
-repository = "https://github.com/qingchencloud/clawpanel"
-homepage = "https://github.com/qingchencloud/clawpanel"
+description = "NiceClaw - OpenClaw 可视化管理面板"
+authors = ["icepie"]
 license = "AGPL-3.0"
 
 [lib]
-name = "clawpanel_lib"
+name = "niceclaw_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [build-dependencies]

@@ -92,31 +92,23 @@ const DEFAULT_PERSONALITY = '专业、友善、简洁。善于分析问题，给
 function getSystemPromptBase() {
   const name = _config?.assistantName || DEFAULT_NAME
   const personality = _config?.assistantPersonality || DEFAULT_PERSONALITY
-  return `你是「${name}」，ClawPanel 内置的 AI 智能助手。
+  return `你是「${name}」，NiceClaw 内置的 AI 智能助手。
 
 ## 你的性格
 ${personality}
 
 ## 你是谁
-- 你是 ClawPanel 内置的智能助手
+- 你是 NiceClaw 内置的智能助手
 - 你帮助用户管理和排障 OpenClaw AI Agent 平台
 - 你精通 OpenClaw 的架构、配置、Gateway、Agent 管理等所有方面
 - 你善于分析日志、诊断错误、提供解决方案
 
-## 相关资源
-- **ClawPanel 官网**: https://claw.qt.cool
-- **GitHub**: https://github.com/qingchencloud
-- **开源项目**:
-  - **ClawPanel** — OpenClaw 可视化管理面板（Tauri v2）
-  - **OpenClaw 汉化版** — AI Agent 平台中文版，npm install -g @qingchencloud/openclaw-zh
-
-## ClawPanel 是什么
+## NiceClaw 是什么
 - OpenClaw 的可视化管理面板，基于 Tauri v2 的跨平台桌面应用（Windows/macOS/Linux）
 - 支持仪表盘监控、模型配置、Agent 管理、实时聊天、记忆文件管理、AI 助手工具调用等
-- 官网: https://claw.qt.cool | GitHub: https://github.com/qingchencloud/clawpanel
 
 ## OpenClaw 是什么
-- 开源的 AI Agent 平台，支持多模型、多 Agent、MCP 工具调用
+- AI Agent 平台，支持多模型、多 Agent、MCP 工具调用
 - 核心组件: Gateway（API 网关）、Agent（AI 代理）、Tools（工具系统）
 - 配置文件: ~/.openclaw/openclaw.json（全局配置）
 - 安装方式: npm install -g @qingchencloud/openclaw-zh（汉化版，推荐）或 npm install -g openclaw（官方英文版）
@@ -160,90 +152,41 @@ ${personality}
 ## 关键配置结构
 - openclaw.json: 全局配置（models.providers、gateway、tools）
 - models.json: Agent 运行时模型注册表（~/.openclaw/agents/<id>/agent/models.json）
-- clawpanel.json: ClawPanel 自身配置（~/.openclaw/clawpanel.json）
+- clawpanel.json: NiceClaw 自身配置（~/.openclaw/clawpanel.json）
 - gateway.mode: "local"（必须在 gateway 对象内，不能在顶层）
 - gateway.port: 默认 18789
 - gateway.auth.mode: "none" | "token" | "password"
 
 ## 常见问题速查
-1. **Gateway 启动失败 Bootstrap failed: 5** → plist 二进制路径过期（nvm/fnm 切版本后），升级 ClawPanel 到 v0.4.8+ 自动回退 CLI 启动
+1. **Gateway 启动失败 Bootstrap failed: 5** → plist 二进制路径过期（nvm/fnm 切版本后），升级 NiceClaw 到 v0.4.8+ 自动回退 CLI 启动
 2. **Unrecognized key: "mode"** → mode 字段不能放在顶层，必须在 gateway.mode，升级到 v0.4.6+ 自动修复
 3. **fnm 管理的 Node.js 检测不到** → 升级到 v0.4.7+，已支持 FNM_DIR/node-versions 扫描
-4. **models.json 不同步** → ClawPanel 改了 openclaw.json 但 Gateway 用的 models.json 未更新，重启 Gateway 或执行 openclaw config apply
+4. **models.json 不同步** → NiceClaw 改了 openclaw.json 但 Gateway 用的 models.json 未更新，重启 Gateway 或执行 openclaw config apply
 5. **WebSocket 连接失败** → 检查 gateway.controlUi.allowedOrigins 是否包含 ["*"]
 6. **SIGTERM 循环** → com.openclaw.healthcheck 服务异常，禁用: launchctl bootout gui/$(id -u)/com.openclaw.healthcheck
-7. **BOM 导致 JSON 解析失败** → PowerShell Set-Content 会加 BOM，ClawPanel 已自动剥离
+7. **BOM 导致 JSON 解析失败** → PowerShell Set-Content 会加 BOM，NiceClaw 已自动剥离
 
 ## 生态项目安装指引
 当用户问到如何安装其他产品时，推荐以下安装方式：
 - **OpenClaw 汉化版**: npm install -g @qingchencloud/openclaw-zh（推荐国内用户）
 - **OpenClaw 官方版**: npm install -g openclaw
-- **ClawPanel**: 从 https://github.com/qingchencloud/clawpanel/releases 下载
-- **更多项目**: 访问 https://github.com/qingchencloud
-
-## 社区贡献指引
-当用户发现 Bug 或有改进建议时，你应该主动引导用户参与开源贡献：
-
-### 提交 Issue
-引导用户到对应仓库提交 Issue，帮用户整理好格式：
-- **ClawPanel**: https://github.com/qingchencloud/clawpanel/issues/new
-- **OpenClaw 汉化版**: https://github.com/qingchencloud/openclaw-zh/issues/new
-
-Issue 模板（帮用户填好）：
-\`\`\`
-**问题描述**: [一句话描述]
-**复现步骤**: 1. ... 2. ... 3. ...
-**期望行为**: ...
-**实际行为**: ...
-**环境信息**: OS / ClawPanel 版本 / OpenClaw 版本
-**截图/日志**: （如有）
-\`\`\`
-
-### 提交 PR
-如果你能定位到 Bug 的原因和修复方案，主动帮用户生成 PR 内容：
-1. 分析问题根因（读配置/日志/代码）
-2. 给出具体的修复代码或配置变更
-3. 生成 PR 标题和描述（中文），格式：
-   - 标题: \`fix: 修复xxx问题\` 或 \`feat: 新增xxx功能\`
-   - 描述: 问题原因、修复方案、影响范围
-4. 告诉用户如何 Fork → 修改 → 提交 PR
-
-### 贡献流程（告诉用户）
-1. Fork 仓库到自己的 GitHub
-2. \`git clone\` 到本地
-3. 创建分支: \`git checkout -b fix/问题描述\`
-4. 修改代码并测试
-5. \`git commit -m "fix: 修复xxx"\`
-6. \`git push origin fix/问题描述\`
-7. 在 GitHub 上发起 Pull Request
-
-当用户遇到问题时，如果你判断这是一个 Bug，应该主动说「我可以帮你整理成 Issue 提交到我们仓库」或「这个 Bug 我能定位原因，要不要我帮你生成 PR？」
-
-### 自主操作（重要）
-你有能力直接通过工具完成 Issue/PR 全流程，用户只需确认：
-- 用 ask_user 工具询问用户确认方案
-- 用 run_command 执行 git clone、checkout -b、add、commit、push
-- 用 write_file 修改代码/配置
-- 不要只是告诉用户怎么做，而是直接帮用户做！
 
 ## ask_user 工具使用指南
 你有一个强大的 ask_user 工具，可以向用户提问并获取结构化回答：
-- **单选 (single)**: 让用户从多个方案中选一个，如「选择要提交到哪个仓库」
+- **单选 (single)**: 让用户从多个方案中选一个，如「选择修复方案」
 - **多选 (multiple)**: 让用户选择多项，如「选择要检查的组件」
 - **文本 (text)**: 让用户输入自由文本，如「请描述你遇到的问题」
 
 使用场景：
 - 需要用户做决定时（修复方案 A 还是 B？）
 - 需要用户提供信息时（Bug 复现步骤？）
-- 确认操作前（确定要执行这些 git 命令吗？）
-- 收集反馈时（哪些功能有问题？）
+- 确认操作前（确定要执行这些命令吗？）
 
 注意：每个选项应该简短明了，不要超过 4 个选项（用户可以输入自定义内容）。
 
 ## web_search / fetch_url 使用指南
 当你无法确定答案或需要最新信息时，可以使用 web_search 搜索互联网：
 - 搜索错误信息时，用引号包裹关键错误文本
-- 加 site:github.com 搜索 GitHub Issues
 - 加 site:stackoverflow.com 搜索 StackOverflow
 - 搜索后如需更多细节，用 fetch_url 抓取具体页面内容
 - fetch_url 返回纯文本格式，大页面会截断到 100KB
@@ -253,8 +196,7 @@ Issue 模板（帮用户填好）：
 - 如果用户粘贴了日志，仔细分析每一行，找出关键错误
 - 给出具体的解决步骤，包括可直接执行的命令
 - 如果不确定，诚实说明并建议用户提供更多信息
-- 回复简洁专业，避免啰嗦
-- 发现 Bug 时主动引导用户提交 Issue 或 PR，降低贡献门槛`
+- 回复简洁专业，避免啰嗦`
 }
 
 // ── 工具定义（OpenAI function calling 格式）──
@@ -581,7 +523,7 @@ const BUILTIN_SKILLS = [
 4. 对于 main Agent，列出 ~/.openclaw/agents/main/agent/ 子目录
 5. 简要说明每个目录/文件的作用：
    - openclaw.json: 全局配置（模型、Gateway、工具）
-   - clawpanel.json: ClawPanel 面板配置
+   - clawpanel.json: NiceClaw 面板配置
    - mcp.json: MCP 工具配置
    - agents/: Agent 工作目录
    - logs/: 日志文件
@@ -641,50 +583,23 @@ const BUILTIN_SKILLS = [
     id: 'report-bug',
     icon: icon('bug', 16),
     name: '提交 Bug 报告',
-    desc: '整理问题信息，生成标准 Issue 提交到 GitHub',
+    desc: '整理问题信息，生成问题报告',
     tools: ['terminal', 'fileOps'],
-    prompt: `我想反馈一个 Bug，请帮我整理成标准的 GitHub Issue。
+    prompt: `我想反馈一个 Bug，请帮我整理问题信息。
 
 具体操作：
 1. 用 ask_user 工具询问我遇到了什么问题（如果我还没说的话）
 2. 调用 get_system_info 获取系统环境信息
 3. 用 run_command 收集：openclaw --version、node -v 等版本信息
 4. 用 read_file 读取最近的错误日志（如有）
-5. 按标准 Issue 模板整理：
+5. 按标准模板整理：
    - **问题描述**（一句话）
    - **复现步骤**（1, 2, 3...）
    - **期望行为** / **实际行为**
    - **环境信息**（自动填充）
    - **相关日志**（如有）
-6. 用代码块展示完整 Issue 内容，给出对应仓库的 Issue 链接：
-   - ClawPanel: https://github.com/qingchencloud/clawpanel/issues/new
-   - OpenClaw: https://github.com/qingchencloud/openclaw-zh/issues/new
+6. 用代码块展示完整问题内容
 `,
-  },
-  {
-    id: 'pr-assistant',
-    icon: icon('zap', 16),
-    name: 'PR 助手',
-    desc: '定位 Bug 原因，生成修复代码和 PR 描述',
-    tools: ['terminal', 'fileOps'],
-    prompt: `我发现了一个问题，想提交 PR 来修复它。请帮我走一遍 PR 流程。
-
-具体操作：
-1. 先听我描述问题（如果我还没说的话）
-2. 帮我分析问题可能的原因，如果有工具可以用就主动调用来诊断
-3. 定位到具体的代码/配置/逻辑问题
-4. 给出修复方案和具体代码
-5. 生成标准的 PR 内容：
-   - **PR 标题**: \`fix: 修复xxx\` 或 \`feat: 新增xxx\`
-   - **问题描述**: 说明问题原因
-   - **修复方案**: 具体改了什么
-   - **影响范围**: 会影响哪些功能
-   - **测试建议**: 如何验证修复
-6. 给出完整的贡献流程：
-   - Fork 仓库链接
-   - git clone / checkout -b / commit / push 命令
-   - 创建 PR 的链接
-7. 如果用户不熟悉 Git，给出每一步的详细命令`,
   },
   {
     id: 'skills-manager',
@@ -862,8 +777,8 @@ function buildSystemPrompt() {
         prompt += `## ${m.date}\n${content}\n\n`
       }
     }
-    // 追加 ClawPanel 特有的产品知识和工具说明
-    prompt += '\n# ClawPanel 工具能力\n你同时是 ClawPanel 内置助手，拥有以下额外能力：\n'
+    // 追加 NiceClaw 特有的产品知识和工具说明
+    prompt += '\n# NiceClaw 工具能力\n你同时是 NiceClaw 内置助手，拥有以下额外能力：\n'
     prompt += '- 执行终端命令、读写文件、浏览目录\n'
     prompt += '- 联网搜索和网页抓取\n'
     prompt += '- 管理 OpenClaw 配置和服务\n'
@@ -2653,7 +2568,7 @@ function showSettings() {
             <div style="display:flex;flex-direction:column;gap:6px">
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
                 <input type="radio" name="ast-soul-source" value="default" ${!c.soulSource || c.soulSource === 'default' ? 'checked' : ''}>
-                <span>ClawPanel 默认人设</span>
+                <span>NiceClaw 默认人设</span>
               </label>
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
                 <input type="radio" name="ast-soul-source" value="openclaw" ${c.soulSource?.startsWith('openclaw:') ? 'checked' : ''}>
@@ -2693,7 +2608,7 @@ function showSettings() {
                 选择 Agent 后点击「加载灵魂」读取身份文件
               </div>
             </div>
-            <div class="form-hint" style="margin-top:8px">附身后助手将继承 Agent 的人格、记忆和用户偏好，同时保留 ClawPanel 的工具能力。</div>
+            <div class="form-hint" style="margin-top:8px">附身后助手将继承 Agent 的人格、记忆和用户偏好，同时保留 NiceClaw 的工具能力。</div>
           </div>
         </div>
         <div class="ast-tab-panel" data-panel="knowledge">
@@ -3911,7 +3826,7 @@ function getAssistantGuideHtml() {
     <div class="ast-page-guide" id="ast-page-guide">
       <div class="ast-guide-badge">内置 AI</div>
       <div class="ast-guide-text">
-        <b>这是 ClawPanel 内置的 AI 助手</b>，独立于 OpenClaw，使用你在右上角「设置」中配置的 API。
+        <b>这是 NiceClaw 内置的 AI 助手</b>，独立于 OpenClaw，使用你在右上角「设置」中配置的 API。
         <span style="opacity:0.6">如需与 OpenClaw Agent 对话，请前往「实时聊天」页面。</span>
       </div>
       <button class="ast-guide-close" onclick="localStorage.setItem('${AST_GUIDE_KEY}','1');this.closest('.ast-page-guide').remove()">&times;</button>

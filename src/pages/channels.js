@@ -45,7 +45,7 @@ const PLATFORM_REGISTRY = {
       '⚠️ 发布应用版本！在「版本管理与发布」中创建版本并发布上线，否则机器人不会响应消息',
       '保存后面板会自动安装 <code>@dingtalk-real-ai/dingtalk-connector</code> 插件，并自动开启 Gateway HTTP chatCompletions 端点',
     ],
-    guideFooter: '<div style="margin-top:8px;font-size:var(--font-size-xs);color:var(--text-tertiary)">详细教程：<a href="https://claw.qt.cool/docs/dingtalk-integration.html" target="_blank" style="color:var(--accent);text-decoration:underline">ClawPanel 钉钉接入指南</a></div>',
+    guideFooter: '<div style="margin-top:8px;font-size:var(--font-size-xs);color:var(--text-tertiary)">详细教程：<a href="https://claw.qt.cool/docs/dingtalk-integration.html" target="_blank" style="color:var(--accent);text-decoration:underline">NiceClaw 钉钉接入指南</a></div>',
     fields: [
       { key: 'clientId', label: 'Client ID', placeholder: '钉钉应用 AppKey / Client ID', required: true },
       { key: 'clientSecret', label: 'Client Secret', placeholder: '钉钉应用 AppSecret / Client Secret', secret: true, required: true },

@@ -22,7 +22,7 @@ pub mod service;
 pub mod skills;
 pub mod update;
 
-/// 默认 OpenClaw 配置目录（ClawPanel 自身配置始终在此）
+/// 默认 OpenClaw 配置目录（NiceClaw 自身配置始终在此）
 fn default_openclaw_dir() -> PathBuf {
     dirs::home_dir().unwrap_or_default().join(".openclaw")
 }
@@ -81,7 +81,7 @@ fn read_gateway_port_from_config() -> u16 {
 }
 
 fn panel_config_path() -> PathBuf {
-    // ClawPanel 自身配置始终在默认目录，不随 openclawDir 变化
+    // NiceClaw 自身配置始终在默认目录，不随 openclawDir 变化
     default_openclaw_dir().join("clawpanel.json")
 }
 

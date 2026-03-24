@@ -15,7 +15,7 @@ const LATEST_JSON_URL: &str = "https://claw.qt.cool/update/latest.json";
 /// 检查前端是否有新版本可用
 #[tauri::command]
 pub async fn check_frontend_update() -> Result<Value, String> {
-    let client = super::build_http_client(std::time::Duration::from_secs(10), Some("ClawPanel"))
+    let client = super::build_http_client(std::time::Duration::from_secs(10), Some("NiceClaw"))
         .map_err(|e| format!("HTTP 客户端错误: {e}"))?;
 
     let resp = client
@@ -62,7 +62,7 @@ pub async fn check_frontend_update() -> Result<Value, String> {
 /// 下载并解压前端更新包
 #[tauri::command]
 pub async fn download_frontend_update(url: String, expected_hash: String) -> Result<Value, String> {
-    let client = super::build_http_client(std::time::Duration::from_secs(120), Some("ClawPanel"))
+    let client = super::build_http_client(std::time::Duration::from_secs(120), Some("NiceClaw"))
         .map_err(|e| format!("HTTP 客户端错误: {e}"))?;
 
     let resp = client

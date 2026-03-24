@@ -1,19 +1,11 @@
 {
-  "name": "clawpanel",
+  "name": "niceclaw",
   "version": "0.9.8",
   "private": true,
-  "description": "ClawPanel - OpenClaw 可视化管理面板，基于 Tauri v2 的跨平台桌面应用",
+  "description": "NiceClaw - OpenClaw 可视化管理面板，基于 Tauri v2 的跨平台桌面应用",
   "type": "module",
-  "author": "qingchencloud",
+  "author": "icepie",
   "license": "AGPL-3.0",
-  "homepage": "https://github.com/qingchencloud/clawpanel",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/qingchencloud/clawpanel.git"
-  },
-  "bugs": {
-    "url": "https://github.com/qingchencloud/clawpanel/issues"
-  },
   "keywords": [
     "openclaw",
     "ai-agent",

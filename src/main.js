@@ -1,5 +1,5 @@
 /**
- * ClawPanel 入口
+ * NiceClaw 入口
  */
 
 // 模块已加载，取消 splash 超时回退（防止假阳性的 "页面加载失败" 提示）
@@ -83,7 +83,7 @@ function showBackendDownOverlay() {
       ${_logoSvg}
       <div class="login-title" style="color:var(--error,#ef4444)">后端未启动</div>
       <div class="login-desc" style="line-height:1.8">
-        ClawPanel 后端服务未运行，无法获取真实数据。<br>
+        NiceClaw 后端服务未运行，无法获取真实数据。<br>
         <span style="font-size:12px;color:var(--text-tertiary)">请在服务器上启动后端服务后刷新页面。</span>
       </div>
       <div style="background:var(--bg-tertiary);border-radius:var(--radius-md,8px);padding:14px 18px;margin:16px 0;text-align:left;font-family:var(--font-mono,monospace);font-size:12px;line-height:1.8;user-select:all;color:var(--text-secondary)">
@@ -97,8 +97,7 @@ function showBackendDownOverlay() {
       </button>
       <div id="backend-retry-status" style="font-size:12px;color:var(--text-tertiary);margin-top:12px"></div>
       <div style="margin-top:16px;font-size:11px;color:#aaa">
-        <a href="https://github.com/icepie/clawpanel" target="_blank" rel="noopener" style="color:#aaa;text-decoration:none">GitHub</a>
-        <span style="margin:0 6px">&middot;</span>v${APP_VERSION}
+        v${APP_VERSION}
       </div>
     </div>
   `
@@ -163,7 +162,7 @@ function showLoginOverlay(defaultPw) {
   overlay.innerHTML = `
     <div class="login-card">
       ${_logoSvg}
-      <div class="login-title">ClawPanel</div>
+      <div class="login-title">NiceClaw</div>
       <div class="login-desc">${hasDefault
         ? '首次使用，默认密码已自动填充<br><span style="font-size:12px;color:#6366f1;font-weight:600">登录后请前往「安全设置」修改密码</span>'
         : (isTauri ? '应用已锁定，请输入密码' : '请输入访问密码')}</div>
@@ -186,8 +185,7 @@ function showLoginOverlay(defaultPw) {
         </div>
       </details>` : ''}
       <div style="margin-top:${hasDefault ? '20' : '12'}px;font-size:11px;color:#aaa;text-align:center">
-        <a href="https://github.com/icepie/clawpanel" target="_blank" rel="noopener" style="color:#aaa;text-decoration:none">GitHub</a>
-        <span style="margin:0 6px">·</span>v${APP_VERSION}
+        v${APP_VERSION}
       </div>
     </div>
   `
@@ -329,7 +327,7 @@ async function boot() {
     <button class="mobile-hamburger" id="btn-mobile-menu">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <span class="mobile-topbar-title">ClawPanel</span>
+    <span class="mobile-topbar-title">NiceClaw</span>
   `
   topbar.querySelector('.mobile-hamburger').addEventListener('click', openMobileSidebar)
   mainCol.prepend(topbar)
@@ -648,14 +646,12 @@ async function checkGlobalUpdate() {
       <div class="update-banner-content">
         <div class="update-banner-text">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          <span class="update-banner-ver">ClawPanel v${ver} 可用</span>
+          <span class="update-banner-ver">NiceClaw v${ver} 可用</span>
           ${changelog ? `<span class="update-banner-changelog">· ${changelog}</span>` : ''}
         </div>
         ${isWeb
-          ? `<button class="btn btn-sm" id="btn-update-show-cmd">更新方法</button>
-             <a class="btn btn-sm" href="https://github.com/icepie/clawpanel/releases" target="_blank" rel="noopener">Release Notes</a>`
-          : `<button class="btn btn-sm" id="btn-update-hot">热更新</button>
-             <a class="btn btn-sm" href="https://github.com/icepie/clawpanel/releases" target="_blank" rel="noopener">完整安装包</a>`
+          ? `<button class="btn btn-sm" id="btn-update-show-cmd">更新方法</button>`
+          : `<button class="btn btn-sm" id="btn-update-hot">热更新</button>`
         }
         <button class="update-banner-close" id="btn-update-dismiss" title="忽略此版本">✕</button>
       </div>
@@ -683,7 +679,7 @@ npm run build
 sudo systemctl restart clawpanel</pre>
             <p style="margin-top:12px;color:var(--text-tertiary);font-size:var(--font-size-xs)">
               如果 git pull 失败，可先执行 <code style="background:var(--bg-tertiary);padding:2px 6px;border-radius:4px">git checkout -- .</code> 丢弃本地修改。<br>
-              路径请替换为实际的 ClawPanel 安装目录。
+              路径请替换为实际的 NiceClaw 安装目录。
             </p>
           </div>
           <div class="modal-actions">
@@ -752,7 +748,7 @@ function startUpdateChecker() {
         <div style="font-size:18px;font-weight:600;margin-bottom:8px;color:#18181b">页面加载失败</div>
         <div style="font-size:13px;color:#71717a;max-width:400px;line-height:1.6;margin-bottom:16px">${String(bootErr?.message || bootErr).replace(/</g,'&lt;')}</div>
         <button onclick="location.reload()" style="padding:8px 20px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;cursor:pointer">刷新重试</button>
-        <div style="margin-top:24px;font-size:11px;color:#a1a1aa">如果问题持续出现，请尝试重新安装 ClawPanel<br>或在 <a href="https://github.com/icepie/clawpanel/issues" target="_blank" style="color:#6366f1">GitHub Issues</a> 反馈</div>
+        <div style="margin-top:24px;font-size:11px;color:#a1a1aa">如果问题持续出现，请尝试重新安装 NiceClaw</div>
       </div>`
   }
   startUpdateChecker()

@@ -135,9 +135,9 @@ export function renderSidebar(el) {
   let html = `
     <div class="sidebar-header">
       <div class="sidebar-logo">
-        <img src="/images/logo.png" alt="ClawPanel">
+        <img src="/images/logo.png" alt="NiceClaw">
       </div>
-      <span class="sidebar-title">ClawPanel</span>
+      <span class="sidebar-title">NiceClaw</span>
       <button class="sidebar-collapse-btn" id="btn-sidebar-collapse" title="折叠/展开">${collapsed ? '»' : '«'}</button>
       <button class="sidebar-close-btn" id="btn-sidebar-close" title="关闭菜单">&times;</button>
     </div>
@@ -182,7 +182,6 @@ export function renderSidebar(el) {
         <span>${isDark ? '日间模式' : '夜间模式'}</span>
       </div>
       <div class="sidebar-meta">
-        <a href="https://github.com/icepie/clawpanel" target="_blank" rel="noopener" class="sidebar-link">GitHub</a>
         <span class="sidebar-version">v${APP_VERSION}</span>
       </div>
     </div>
@@ -351,7 +350,7 @@ async function _showAddInstanceDialog(sidebarEl) {
         <input class="form-input" id="inst-gw-port" type="number" value="18789" />
       </div>
       <div class="docker-dialog-hint">
-        远程服务器需要运行 ClawPanel (serve.js)。<br/>
+        远程服务器需要运行 NiceClaw (serve.js)。<br/>
         示例: <code>http://192.168.1.100:1420</code>
       </div>
       <div id="inst-add-error" style="color:var(--error);font-size:12px;margin-top:var(--space-sm)"></div>

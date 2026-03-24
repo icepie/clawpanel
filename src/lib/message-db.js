@@ -1,6 +1,6 @@
 /**
  * 本地消息存储 - IndexedDB
- * 从 clawapp 移植，适配 ClawPanel
+ * 从 clawapp 移植，适配 NiceClaw
  */
 
 const DB_NAME = 'clawpanel-messages'
