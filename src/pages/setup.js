@@ -381,8 +381,7 @@ function renderInstallSection() {
       <label style="font-size:var(--font-size-xs);color:var(--text-tertiary);display:block;margin-bottom:4px">安装方式</label>
       <select id="install-method" style="width:100%;padding:6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border-primary);background:var(--bg-secondary);color:var(--text-primary);font-size:var(--font-size-sm)">
         <option value="auto">自动选择（推荐）</option>
-        <option value="standalone-r2">独立安装包 · CDN 加速（国内推荐，自带 Node.js，无需 npm）</option>
-        <option value="standalone-github">独立安装包 · GitHub（CDN 不可用时备选）</option>
+        <option value="standalone-github">独立安装包 · GitHub Releases（自带 Node.js，无需 npm）</option>
         <option value="npm">npm 编译安装（传统方式，需要 Node.js + npm + 网络）</option>
       </select>
       <div id="method-hint" style="font-size:var(--font-size-xs);color:var(--text-tertiary);margin-top:4px;line-height:1.5"></div>
@@ -637,9 +636,8 @@ function bindEvents(page, nodeOk, detectState) {
   const sourceRadios = page.querySelectorAll('input[name="install-source"]')
 
   const METHOD_HINTS = {
-    'auto': '自动选择最优安装方式：优先使用独立安装包（零依赖、最快），失败时自动降级到 npm 编译安装。',
-    'standalone-r2': '从晴辰云 CDN 下载独立安装包，自带 Node.js 运行时，无需 npm。国内下载速度最快。',
-    'standalone-github': '从 GitHub Releases 下载独立安装包。CDN 不可用时的备选方案。',
+    'auto': '自动选择最优安装方式：优先使用 GitHub Releases 独立安装包，失败时自动降级到 npm 编译安装。',
+    'standalone-github': '从 GitHub Releases 下载独立安装包，自带 Node.js 运行时，无需 npm。',
     'npm': '传统的 npm install 方式，需要本机已安装 Node.js 和 npm，且网络能访问 npm 仓库。',
   }
 

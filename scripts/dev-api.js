@@ -132,6 +132,114 @@ function standaloneConfig() {
   return policy?.standalone || { enabled: false }
 }
 
+function standaloneDownloadCandidates(downloadUrl, proxyPrefix) {
+  const candidates = []
+  const prefix = String(proxyPrefix || '').trim().replace(/\/+$/, '')
+  if (prefix) {
+    const githubPath = downloadUrl.replace(/^https?:\/\//, '')
+    if (prefix.includes('{url}') || prefix.includes('{github_path}')) {
+      candidates.push({
+        label: 'GitHub 代理',
+        url: prefix.replaceAll('{url}', downloadUrl).replaceAll('{github_path}', githubPath),
+      })
+    } else {
+      candidates.push({ label: 'GitHub 代理(path)', url: `${prefix}/${githubPath}` })
+      candidates.push({ label: 'GitHub 代理(url)', url: `${prefix}/${downloadUrl}` })
+    }
+  }
+  candidates.push({ label: 'GitHub Releases', url: downloadUrl })
+
+  const seen = new Set()
+  return candidates.filter(item => {
+    if (seen.has(item.url)) return false
+    seen.add(item.url)
+    return true
+  })
+}
+
+function standaloneGithubRepo(baseUrl) {
+  const m = String(baseUrl || '').match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/releases\/?$/i)
+  if (!m) return null
+  return { owner: m[1], repo: m[2] }
+}
+
+function pickStandaloneGithubAsset(release, { platform, ext, requestedVersion }) {
+  const assets = Array.isArray(release?.assets) ? release.assets : []
+  const tagVersion = String(release?.tag_name || '').replace(/^v/, '')
+  const exactNames = new Set()
+  if (requestedVersion && requestedVersion !== 'latest') {
+    exactNames.add(`openclaw-${requestedVersion}-${platform}.${ext}`)
+  }
+  if (tagVersion) {
+    exactNames.add(`openclaw-${tagVersion}-${platform}.${ext}`)
+  }
+
+  for (const asset of assets) {
+    const name = String(asset?.name || '')
+    const url = String(asset?.browser_download_url || '')
+    if (name && url && exactNames.has(name)) {
+      return { name, url, version: tagVersion || requestedVersion || 'unknown' }
+    }
+  }
+
+  const suffix = `.${String(ext || '').toLowerCase()}`
+  for (const asset of assets) {
+    const name = String(asset?.name || '')
+    const url = String(asset?.browser_download_url || '')
+    const lower = name.toLowerCase()
+    if (!name || !url) continue
+    if (!lower.includes('openclaw')) continue
+    if (!lower.includes(String(platform || '').toLowerCase())) continue
+    if (!lower.endsWith(suffix)) continue
+    return { name, url, version: tagVersion || requestedVersion || 'unknown' }
+  }
+  return null
+}
+
+async function resolveStandaloneGithubAsset({ baseUrl, version, platform, ext, logs, allowLatestFallback }) {
+  const repo = standaloneGithubRepo(baseUrl)
+  if (!repo) return null
+
+  const headers = { 'Accept': 'application/vnd.github+json' }
+  const requestedVersion = String(version || '').replace(/^v/, '')
+  const apiBase = `https://api.github.com/repos/${repo.owner}/${repo.repo}`
+
+  if (requestedVersion && requestedVersion !== 'latest') {
+    for (const tag of [`v${requestedVersion}`, requestedVersion]) {
+      try {
+        logs.push(`查询 GitHub Release: ${tag}`)
+        const resp = await globalThis.fetch(`${apiBase}/releases/tags/${encodeURIComponent(tag)}`, {
+          headers,
+          signal: AbortSignal.timeout(15000),
+        })
+        if (resp.status === 404) continue
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+        const release = await resp.json()
+        const asset = pickStandaloneGithubAsset(release, { platform, ext, requestedVersion })
+        if (asset) return asset
+      } catch (e) {
+        logs.push(`⚠️ GitHub Release 查询失败 (${tag}): ${e.message || e}`)
+      }
+    }
+  }
+
+  if (!allowLatestFallback && requestedVersion && requestedVersion !== 'latest') return null
+
+  logs.push('未找到精确版本，尝试读取最新可用 GitHub Release...')
+  const resp = await globalThis.fetch(`${apiBase}/releases`, {
+    headers,
+    signal: AbortSignal.timeout(15000),
+  })
+  if (!resp.ok) throw new Error(`GitHub Releases 查询失败 (HTTP ${resp.status})`)
+  const releases = await resp.json()
+  for (const release of Array.isArray(releases) ? releases : []) {
+    if (release?.draft) continue
+    const asset = pickStandaloneGithubAsset(release, { platform, ext, requestedVersion: null })
+    if (asset) return asset
+  }
+  return null
+}
+
 function standalonePlatformKey() {
   const arch = process.arch
   const plat = process.platform
@@ -148,36 +256,62 @@ function standaloneInstallDir() {
   return path.join(os.homedir(), '.openclaw-bin')
 }
 
-async function _tryStandaloneInstall(version, logs, overrideBaseUrl = null) {
+async function _tryStandaloneInstall(version, logs, { allowLatestFallback = false } = {}) {
   const cfg = standaloneConfig()
   if (!cfg.enabled || !cfg.baseUrl) return false
   const platform = standalonePlatformKey()
   if (platform === 'unknown') throw new Error('当前平台不支持 standalone 安装包')
   const installDir = standaloneInstallDir()
+  const remoteVersion = String(version || '').replace(/^v/, '')
+  if (!remoteVersion || remoteVersion === 'latest') {
+    throw new Error('standalone GitHub 安装需要明确版本号')
+  }
+  const releaseBase = String(cfg.baseUrl).replace(/\/+$/, '')
 
   logs.push('📦 尝试 standalone 独立安装包（汉化版专属，自带 Node.js 运行时，无需 npm）')
-  logs.push('查询最新版本...')
-  const manifestUrl = `${cfg.baseUrl}/latest.json`
-  const resp = await globalThis.fetch(manifestUrl, { signal: AbortSignal.timeout(10000) })
-  if (!resp.ok) throw new Error(`standalone 清单不可用 (HTTP ${resp.status})`)
-  const manifest = await resp.json()
-
-  const remoteVersion = manifest.version
-  if (!remoteVersion) throw new Error('standalone 清单缺少 version 字段')
-  if (version !== 'latest' && !versionsMatch(remoteVersion, version)) {
-    throw new Error(`standalone 版本 ${remoteVersion} 与请求版本 ${version} 不匹配`)
-  }
-
-  const remoteBase = overrideBaseUrl || manifest.base_url || `${cfg.baseUrl}/${remoteVersion}`
+  logs.push(`准备下载版本: ${remoteVersion}`)
+  const remoteBase = `${releaseBase}/download/v${remoteVersion}`
   const ext = isWindows ? 'zip' : 'tar.gz'
   const filename = `openclaw-${remoteVersion}-${platform}.${ext}`
   const downloadUrl = `${remoteBase}/${filename}`
-
-  logs.push(`从 CDN 下载: ${filename}`)
+  let candidates = standaloneDownloadCandidates(downloadUrl, cfg.proxyPrefix)
 
   const tmpPath = path.join(os.tmpdir(), filename)
-  const dlResp = await globalThis.fetch(downloadUrl, { signal: AbortSignal.timeout(600000) })
-  if (!dlResp.ok) throw new Error(`standalone 下载失败 (HTTP ${dlResp.status})`)
+  let dlResp = null
+  let lastError = null
+  for (let phase = 0; phase < 2 && !dlResp; phase++) {
+    for (const candidate of candidates) {
+      logs.push(`尝试下载源: ${candidate.label}`)
+      try {
+        const resp = await globalThis.fetch(candidate.url, { signal: AbortSignal.timeout(600000) })
+        if (!resp.ok) {
+          lastError = `${candidate.label} 返回 HTTP ${resp.status}: ${candidate.url}`
+          logs.push(`⚠️ ${lastError}`)
+          continue
+        }
+        logs.push(`从 ${candidate.label} 下载: ${filename}`)
+        dlResp = resp
+        break
+      } catch (e) {
+        lastError = `${candidate.label} 请求失败: ${e.message || e}`
+        logs.push(`⚠️ ${lastError}`)
+      }
+    }
+    if (dlResp || phase === 1) break
+    const fallbackAsset = await resolveStandaloneGithubAsset({
+      baseUrl: releaseBase,
+      version: remoteVersion,
+      platform,
+      ext,
+      logs,
+      allowLatestFallback,
+    })
+    if (!fallbackAsset) break
+    logs.push(`切换到 GitHub Release 资产: ${fallbackAsset.name}`)
+    candidates = standaloneDownloadCandidates(fallbackAsset.url, cfg.proxyPrefix)
+    lastError = null
+  }
+  if (!dlResp) throw new Error(`standalone 下载失败: ${lastError || '没有可用的下载源'}`)
   const buffer = Buffer.from(await dlResp.arrayBuffer())
   const sizeMb = (buffer.length / 1048576).toFixed(0)
   logs.push(`下载完成 (${sizeMb}MB)，解压安装中...`)
@@ -3269,22 +3403,19 @@ const handlers = {
     const registry = pickRegistryForPackage(pkg)
     const logs = []
 
-    // ── standalone 安装（auto / standalone-r2 / standalone-github） ──
+    // ── standalone 安装（auto / standalone-github；旧 standalone-r2 值兼容为 GitHub） ──
     const tryStandalone = source !== 'official' && ['auto', 'standalone-r2', 'standalone-github'].includes(method)
     if (tryStandalone) {
       try {
-        const githubBase = method === 'standalone-github'
-          ? `https://github.com/qingchencloud/openclaw-standalone/releases/download/v${ver}`
-          : null
-        const saResult = await _tryStandaloneInstall(ver, logs, githubBase)
+        const standaloneVer = ver === 'latest' ? (recommended || ver) : ver
+        const saResult = await _tryStandaloneInstall(standaloneVer, logs, { allowLatestFallback: !version })
         if (saResult) {
-          const label = method === 'standalone-github' ? 'GitHub' : 'CDN'
-          logs.push(`✅ standalone (${label}) 安装完成`)
+          logs.push('✅ standalone (GitHub Releases) 安装完成')
           return logs.join('\n')
         }
       } catch (e) {
         if (method === 'auto') {
-          logs.push(`standalone 不可用（${e.message}），降级到 npm 安装...`)
+          logs.push(`standalone GitHub Releases 不可用（${e.message}），降级到 npm 安装...`)
         } else {
           throw new Error(`standalone 安装失败: ${e.message}`)
         }

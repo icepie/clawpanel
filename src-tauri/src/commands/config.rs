@@ -3,7 +3,7 @@ use crate::utils::openclaw_command;
 /// 配置读写命令
 use serde::Deserialize;
 use serde_json::{json, Value};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -82,6 +82,9 @@ struct StandaloneConfig {
     #[serde(rename = "baseUrl")]
     base_url: Option<String>,
     #[serde(default)]
+    #[serde(rename = "proxyPrefix")]
+    proxy_prefix: Option<String>,
+    #[serde(default)]
     enabled: bool,
 }
 
@@ -143,6 +146,193 @@ fn r2_config() -> R2Config {
 
 fn standalone_config() -> StandaloneConfig {
     load_version_policy().standalone
+}
+
+fn standalone_download_candidates(
+    download_url: &str,
+    proxy_prefix: Option<&str>,
+) -> Vec<(String, String)> {
+    let mut candidates = Vec::new();
+
+    if let Some(prefix) = proxy_prefix.map(str::trim).filter(|s| !s.is_empty()) {
+        let prefix = prefix.trim_end_matches('/');
+        let github_path = download_url
+            .strip_prefix("https://")
+            .or_else(|| download_url.strip_prefix("http://"))
+            .unwrap_or(download_url);
+
+        if prefix.contains("{url}") || prefix.contains("{github_path}") {
+            let resolved = prefix
+                .replace("{url}", download_url)
+                .replace("{github_path}", github_path);
+            candidates.push(("GitHub 代理".to_string(), resolved));
+        } else {
+            candidates.push((
+                "GitHub 代理(path)".to_string(),
+                format!("{prefix}/{github_path}"),
+            ));
+            candidates.push((
+                "GitHub 代理(url)".to_string(),
+                format!("{prefix}/{download_url}"),
+            ));
+        }
+    }
+
+    candidates.push(("GitHub Releases".to_string(), download_url.to_string()));
+
+    let mut seen = HashSet::new();
+    candidates
+        .into_iter()
+        .filter(|(_, url)| seen.insert(url.clone()))
+        .collect()
+}
+
+fn standalone_github_repo(base_url: &str) -> Option<(String, String)> {
+    let trimmed = base_url.trim().trim_end_matches('/');
+    let path = trimmed
+        .strip_prefix("https://github.com/")
+        .or_else(|| trimmed.strip_prefix("http://github.com/"))?;
+    let path = path.strip_suffix("/releases")?;
+    let mut parts = path.split('/');
+    let owner = parts.next()?.trim();
+    let repo = parts.next()?.trim();
+    if owner.is_empty() || repo.is_empty() {
+        return None;
+    }
+    Some((owner.to_string(), repo.to_string()))
+}
+
+fn standalone_pick_release_asset(
+    release: &Value,
+    platform: &str,
+    ext: &str,
+    requested_version: Option<&str>,
+) -> Option<(String, String, String)> {
+    let tag_version = release
+        .get("tag_name")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim_start_matches('v')
+        .to_string();
+    let assets = release.get("assets")?.as_array()?;
+
+    let mut exact_names = HashSet::new();
+    if let Some(ver) = requested_version.filter(|v| !v.is_empty() && *v != "latest") {
+        exact_names.insert(format!("openclaw-{ver}-{platform}.{ext}"));
+    }
+    if !tag_version.is_empty() {
+        exact_names.insert(format!("openclaw-{tag_version}-{platform}.{ext}"));
+    }
+
+    for asset in assets {
+        let name = asset.get("name").and_then(|v| v.as_str()).unwrap_or("");
+        let url = asset
+            .get("browser_download_url")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        if !name.is_empty() && !url.is_empty() && exact_names.contains(name) {
+            return Some((name.to_string(), url.to_string(), tag_version.clone()));
+        }
+    }
+
+    let suffix = format!(".{}", ext.to_ascii_lowercase());
+    let platform_lc = platform.to_ascii_lowercase();
+    for asset in assets {
+        let name = asset.get("name").and_then(|v| v.as_str()).unwrap_or("");
+        let url = asset
+            .get("browser_download_url")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let name_lc = name.to_ascii_lowercase();
+        if !name.is_empty()
+            && !url.is_empty()
+            && name_lc.contains("openclaw")
+            && name_lc.contains(&platform_lc)
+            && name_lc.ends_with(&suffix)
+        {
+            return Some((name.to_string(), url.to_string(), tag_version.clone()));
+        }
+    }
+
+    None
+}
+
+async fn resolve_standalone_github_asset(
+    base_url: &str,
+    version: &str,
+    platform: &str,
+    ext: &str,
+    allow_latest_fallback: bool,
+) -> Result<Option<(String, String, String)>, String> {
+    let (owner, repo) = match standalone_github_repo(base_url) {
+        Some(v) => v,
+        None => return Ok(None),
+    };
+    let requested_version = version.trim_start_matches('v');
+    let api_base = format!("https://api.github.com/repos/{owner}/{repo}");
+    let client = crate::commands::build_http_client(std::time::Duration::from_secs(15), None)
+        .map_err(|e| format!("GitHub API 客户端创建失败: {e}"))?;
+
+    if !requested_version.is_empty() && requested_version != "latest" {
+        for tag in [format!("v{requested_version}"), requested_version.to_string()] {
+            let resp = client
+                .get(format!("{api_base}/releases/tags/{tag}"))
+                .header("Accept", "application/vnd.github+json")
+                .send()
+                .await
+                .map_err(|e| format!("GitHub Release 查询失败 ({tag}): {e}"))?;
+            if resp.status() == reqwest::StatusCode::NOT_FOUND {
+                continue;
+            }
+            if !resp.status().is_success() {
+                return Err(format!(
+                    "GitHub Release 查询失败 ({tag}) (HTTP {})",
+                    resp.status()
+                ));
+            }
+            let release: Value = resp
+                .json()
+                .await
+                .map_err(|e| format!("GitHub Release 解析失败 ({tag}): {e}"))?;
+            if let Some(asset) =
+                standalone_pick_release_asset(&release, platform, ext, Some(requested_version))
+            {
+                return Ok(Some(asset));
+            }
+        }
+    }
+
+    if !allow_latest_fallback && !requested_version.is_empty() && requested_version != "latest" {
+        return Ok(None);
+    }
+
+    let resp = client
+        .get(format!("{api_base}/releases"))
+        .header("Accept", "application/vnd.github+json")
+        .send()
+        .await
+        .map_err(|e| format!("GitHub Releases 查询失败: {e}"))?;
+    if !resp.status().is_success() {
+        return Err(format!("GitHub Releases 查询失败 (HTTP {})", resp.status()));
+    }
+    let releases: Value = resp
+        .json()
+        .await
+        .map_err(|e| format!("GitHub Releases 解析失败: {e}"))?;
+    for release in releases.as_array().into_iter().flatten() {
+        if release
+            .get("draft")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+        {
+            continue;
+        }
+        if let Some(asset) = standalone_pick_release_asset(release, platform, ext, None) {
+            return Ok(Some(asset));
+        }
+    }
+
+    Ok(None)
 }
 
 /// standalone 包的平台 key（与 CI 构建矩阵一致）
@@ -1336,84 +1526,47 @@ fn npm_global_bin_dir() -> Option<PathBuf> {
 }
 
 /// 尝试从 standalone 独立安装包安装 OpenClaw（自带 Node.js，零依赖）
-/// 动态查询 latest.json 获取最新版本，下载对应平台的归档并解压
-/// 成功返回 Ok(版本号)，失败返回 Err(原因) 供 caller 降级到 R2/npm
+/// 优先按约定的 GitHub Releases 下载地址拉取；若只发布了 dev 资产，则回退到 GitHub API 解析可用 Release
+/// 成功返回 Ok(版本号)，失败返回 Err(原因) 供 caller 降级到 npm
 async fn try_standalone_install(
     app: &tauri::AppHandle,
     version: &str,
-    override_base_url: Option<&str>,
+    allow_latest_fallback: bool,
 ) -> Result<String, String> {
-    let source_label = if override_base_url.is_some() {
-        "GitHub"
-    } else {
-        "CDN"
-    };
     use tauri::Emitter;
 
     let cfg = standalone_config();
     if !cfg.enabled {
         return Err("standalone 安装未启用".into());
     }
-    let base_url = cfg.base_url.as_deref().ok_or("standalone baseUrl 未配置")?;
+    let base_url = cfg
+        .base_url
+        .as_deref()
+        .ok_or("standalone GitHub Releases baseUrl 未配置")?
+        .trim_end_matches('/');
     let platform = standalone_platform_key();
     if platform == "unknown" {
         return Err("当前平台不支持 standalone 安装包".into());
     }
     let install_dir = standalone_install_dir().ok_or("无法确定 standalone 安装目录")?;
+    let remote_version = version.trim_start_matches('v');
+    if remote_version.is_empty() || remote_version == "latest" {
+        return Err("standalone GitHub 安装需要明确版本号".into());
+    }
 
-    // 1. 动态查询最新版本
+    // 1. 直接按 GitHub Releases 版本号构造下载地址
     let _ = app.emit(
         "upgrade-log",
         "\u{1F4E6} 尝试 standalone 独立安装包（汉化版专属，自带 Node.js 运行时，无需 npm）",
     );
-    let _ = app.emit("upgrade-log", "查询最新版本...");
-    let manifest_url = format!("{base_url}/latest.json");
-    let client = crate::commands::build_http_client(std::time::Duration::from_secs(10), None)
-        .map_err(|e| format!("HTTP 客户端创建失败: {e}"))?;
-    let manifest_resp = client
-        .get(&manifest_url)
-        .send()
-        .await
-        .map_err(|e| format!("standalone 清单获取失败: {e}"))?;
-    if !manifest_resp.status().is_success() {
-        return Err(format!(
-            "standalone 清单不可用 (HTTP {})",
-            manifest_resp.status()
-        ));
-    }
-    let manifest: Value = manifest_resp
-        .json()
-        .await
-        .map_err(|e| format!("standalone 清单解析失败: {e}"))?;
-
-    let remote_version = manifest
-        .get("version")
-        .and_then(|v| v.as_str())
-        .ok_or("standalone 清单缺少 version 字段")?;
-
-    // 版本匹配检查
-    if version != "latest" && !versions_match(remote_version, version) {
-        return Err(format!(
-            "standalone 版本 {remote_version} 与请求版本 {version} 不匹配"
-        ));
-    }
-
-    let default_base = format!("{base_url}/{remote_version}");
-    let remote_base = if let Some(ovr) = override_base_url {
-        ovr
-    } else {
-        manifest
-            .get("base_url")
-            .and_then(|v| v.as_str())
-            .unwrap_or(&default_base)
-    };
+    let _ = app.emit("upgrade-log", format!("准备下载版本: {remote_version}"));
+    let remote_base = format!("{base_url}/download/v{remote_version}");
 
     // 2. 构造下载 URL
     let ext = standalone_archive_ext();
     let filename = format!("openclaw-{remote_version}-{platform}.{ext}");
     let download_url = format!("{remote_base}/{filename}");
 
-    let _ = app.emit("upgrade-log", format!("从 {source_label} 下载: {filename}"));
     let _ = app.emit("upgrade-progress", 15);
 
     // 3. 流式下载
@@ -1421,17 +1574,68 @@ async fn try_standalone_install(
     let archive_path = tmp_dir.join(&filename);
     let dl_client = crate::commands::build_http_client(std::time::Duration::from_secs(600), None)
         .map_err(|e| format!("下载客户端创建失败: {e}"))?;
-    let dl_resp = dl_client
-        .get(&download_url)
-        .send()
-        .await
-        .map_err(|e| format!("standalone 下载失败: {e}"))?;
-    if !dl_resp.status().is_success() {
-        return Err(format!(
-            "standalone 下载失败 (HTTP {}): {download_url}",
-            dl_resp.status()
-        ));
+    let mut candidates = standalone_download_candidates(&download_url, cfg.proxy_prefix.as_deref());
+    let mut selected = None;
+    let mut last_error = None;
+    for phase in 0..2 {
+        for (label, candidate_url) in &candidates {
+            let _ = app.emit("upgrade-log", format!("尝试下载源: {label}"));
+            match dl_client.get(candidate_url).send().await {
+                Ok(resp) if resp.status().is_success() => {
+                    let _ = app.emit("upgrade-log", format!("从 {label} 下载: {filename}"));
+                    selected = Some(resp);
+                    break;
+                }
+                Ok(resp) => {
+                    let reason = format!("{label} 返回 HTTP {}: {candidate_url}", resp.status());
+                    let _ = app.emit("upgrade-log", format!("⚠️ {reason}"));
+                    last_error = Some(reason);
+                }
+                Err(e) => {
+                    let reason = format!("{label} 请求失败: {e}");
+                    let _ = app.emit("upgrade-log", format!("⚠️ {reason}"));
+                    last_error = Some(reason);
+                }
+            }
+        }
+        if selected.is_some() || phase == 1 {
+            break;
+        }
+        let fallback = resolve_standalone_github_asset(
+            base_url,
+            remote_version,
+            platform,
+            ext,
+            allow_latest_fallback,
+        )
+        .await?;
+        let Some((asset_name, asset_url, asset_version)) = fallback else {
+            break;
+        };
+        let resolved_version = if asset_version.is_empty() {
+            "unknown"
+        } else {
+            &asset_version
+        };
+        let _ = app.emit(
+            "upgrade-log",
+            format!("切换到 GitHub Release 资产: {asset_name} ({resolved_version})"),
+        );
+        candidates = standalone_download_candidates(&asset_url, cfg.proxy_prefix.as_deref());
+        last_error = None;
+        if !asset_version.is_empty() && asset_version != remote_version {
+            let _ = app.emit(
+                "upgrade-log",
+                format!("使用最新可用版本代替请求版本: {asset_version}"),
+            );
+        }
     }
+    let dl_resp = selected.ok_or_else(|| {
+        format!(
+            "standalone 下载失败: {}",
+            last_error.unwrap_or_else(|| "没有可用的下载源".to_string())
+        )
+    })?;
     let total_bytes = dl_resp.content_length().unwrap_or(0);
     let size_mb = if total_bytes > 0 {
         format!("{:.0}MB", total_bytes as f64 / 1_048_576.0)
@@ -1922,31 +2126,22 @@ async fn upgrade_openclaw_inner(
         .unwrap_or("latest");
     let pkg = format!("{}@{}", pkg_name, ver);
 
-    // ── standalone 安装（auto / standalone-r2 / standalone-github） ──
+    // ── standalone 安装（auto / standalone-github；旧 standalone-r2 值兼容为 GitHub） ──
     let try_standalone = source != "official"
         && (method == "auto" || method == "standalone-r2" || method == "standalone-github");
 
     if try_standalone {
-        // standalone-github 模式：使用 GitHub Releases 下载地址
-        let github_base = if method == "standalone-github" {
-            Some(format!(
-                "https://github.com/qingchencloud/openclaw-standalone/releases/download/v{}",
-                ver
-            ))
+        let standalone_ver = if ver == "latest" {
+            recommended_version.as_deref().unwrap_or(ver)
         } else {
-            None
+            ver
         };
-        match try_standalone_install(&app, ver, github_base.as_deref()).await {
+        match try_standalone_install(&app, standalone_ver, requested_version.is_none()).await {
             Ok(installed_ver) => {
                 let _ = app.emit("upgrade-progress", 100);
                 super::refresh_enhanced_path();
                 crate::commands::service::invalidate_cli_detection_cache();
-                let label = if method == "standalone-github" {
-                    "GitHub"
-                } else {
-                    "CDN"
-                };
-                let msg = format!("✅ standalone ({label}) 安装完成，当前版本: {installed_ver}");
+                let msg = format!("✅ standalone (GitHub Releases) 安装完成，当前版本: {installed_ver}");
                 let _ = app.emit("upgrade-log", &msg);
                 return Ok(msg);
             }
@@ -1954,7 +2149,7 @@ async fn upgrade_openclaw_inner(
                 if method == "auto" {
                     let _ = app.emit(
                         "upgrade-log",
-                        format!("standalone 不可用（{reason}），降级到 npm 安装..."),
+                        format!("standalone GitHub Releases 不可用（{reason}），降级到 npm 安装..."),
                     );
                     let _ = app.emit("upgrade-progress", 5);
                 } else {

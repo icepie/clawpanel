@@ -1,6 +1,7 @@
 {
   "standalone": {
-    "baseUrl": "https://dl.qrj.ai/openclaw-standalone",
+    "baseUrl": "https://github.com/icepie/openclaw-standalone/releases",
+    "proxyPrefix": "https://claw.qt.cool/proxy/dl/",
     "enabled": true
   },
   "r2": {
